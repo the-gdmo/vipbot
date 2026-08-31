@@ -5,6 +5,7 @@ import {
 } from "@devvit/public-api";
 
 export enum AppSetting {
+    AccessControl = "accessControl",
     FlairFormatting = "flairFormatting",
     LeaderboardSize = "leaderboardSize",
     UsersWhoCannotAwardPoints = "usersWhoCannotAwardPoints",
@@ -13,7 +14,39 @@ export enum AppSetting {
     PointName = "pointName",
     NotifyOnNormalAwardSuccess = "notifyOnNormalAwardSuccess",
     NormalAwardSuccessMessage = "normalAwardSuccessMessage",
+    
 }
+
+export enum AccessControlOptions {
+    ModsOnly = "moderators-only",
+    ModsAndSuperusers = "moderators-and-superusers",
+    ModsSuperusersAndPostAuthor = "moderators-superusers-and-op",
+    ModsAndPostAuthor = "moderators-and-op",
+    Everyone = "everyone",
+}
+
+const AccessControlOptionChoices = [
+    {
+        label: "Moderators Only",
+        value: AccessControlOptions.ModsOnly,
+    },
+    {
+        label: "Moderators and Superusers",
+        value: AccessControlOptions.ModsAndSuperusers,
+    },
+    {
+        label: "Moderators and Post Author (OP)",
+        value: AccessControlOptions.ModsAndPostAuthor,
+    },
+    {
+        label: "Moderators, Superusers, and Post Author (OP)",
+        value: AccessControlOptions.ModsSuperusersAndPostAuthor,
+    },
+    {
+        label: "Everyone",
+        value: AccessControlOptions.Everyone,
+    },
+];
 
 export enum notifyOnNormalAwardFailReplyOptions {
     NoReply = "none",
@@ -43,6 +76,17 @@ export const appSettings: SettingsFormField[] = [
         label: "General Settings",
         helpText: "",
         fields: [
+            {
+                type: "select",
+                name: AppSetting.AccessControl,
+                label: "Who can award points?",
+                helpText: "Choose who is allowed to award points",
+                options: AccessControlOptionChoices,
+                defaultValue: [
+                    AccessControlOptions.ModsAndSuperusers,
+                ],
+                onValidate: selectFieldHasOptionChosen,
+            },
             {
                 type: "string",
                 name: AppSetting.PointName,
