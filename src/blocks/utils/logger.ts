@@ -60,7 +60,7 @@ async function sendModPM(context: TriggerContext, message: string): Promise<void
     const subreddit = context.subredditName ?? (await context.reddit.getCurrentSubreddit()).name;
     await context.reddit.sendPrivateMessage({
       to: `/r/${subreddit}`,
-      subject: "VIPBot Error Alert",
+      subject: "TheRepBot Error Alert",
       text: message.slice(0, 10_000),
     });
   } catch (e) {

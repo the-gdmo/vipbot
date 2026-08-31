@@ -1,23 +1,29 @@
 {
-    "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-    "name": "vipbot2",
-    "blocks": {
-        "entry": "src/blocks/main.ts",
-        "triggers": [
-            "onPostSubmit",
-            "onCommentSubmit",
-            "onCommentUpdate",
-            "onAppInstall",
-            "onAppUpgrade"
-        ]
-    },
-    "media": {
-        "dir": "assets"
-    },
-    "marketingAssets": {
-        "icon": "assets/vipbot.png"
-    },
-    "forms": {
-        "post-create-form": "/internal/form/create-post"
-    }
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "vipbot2",
+  "blocks": {
+    "entry": "src/blocks/main.ts",
+    "triggers": [
+      "onPostSubmit",
+      "onCommentSubmit",
+      "onCommentUpdate",
+      "onAppInstall",
+      "onAppUpgrade"
+    ]
+  },
+  "media": {
+    "dir": "assets"
+  },
+  "marketingAssets": {
+    "icon": "assets/vipbot.png"
+  },
+  "forms": {
+    "post-create-form": "/internal/form/create-post"
+  },
+  "dev": {
+    "subreddit": "vipbot2_dev"
+  },
+  "permissions": {
+    "reddit": true
+  }
 }

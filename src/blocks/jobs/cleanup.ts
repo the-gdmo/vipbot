@@ -1,9 +1,8 @@
 import { TriggerContext } from "@devvit/public-api";
 import { addDays, addMinutes, subMinutes } from "date-fns";
 import { CronExpressionParser } from "cron-parser";
-import { ADHOC_CLEANUP_JOB, CLEANUP_JOB_CRON } from "./constants";
-import { AppSetting } from "./settings";
-import { POINTS_STORE_KEY } from "./triggers/utils/redisKeys";
+import { AppSetting } from "../config/settings";
+import { ADHOC_CLEANUP_JOB, CLEANUP_JOB_CRON, POINTS_STORE_KEY } from "../config/constants";
 
 const CLEANUP_LOG_KEY = "cleanupStore";
 const DAYS_BETWEEN_CHECKS = 28;
