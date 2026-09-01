@@ -6,9 +6,10 @@ import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { setCleanupForUsers } from "../jobs/cleanup";
 import { flairToggleKeyExists, setModDupKey } from "../database/redis";
 import { getUserIsSuperuser, handleAutoSuperuserPromotion, isModerator } from "../config/commentTriggerContext";
-import { formatMessage } from "./formatting";
+import { formatFlair, formatMessage } from "./formatting";
 import { SafeWikiClient, updateUserWiki } from "../jobs/leaderboard";
 import { getParentComment, InitialUserWikiOptions } from "../handlers/commentSubmit";
+import { getLevelFromScore } from "../database/levels";
 
 export interface ScoreResult {
     score: number;
@@ -372,13 +373,12 @@ export async function setUserScore(
             newScore: userScore,
         });
 
-        const flairText = flairFormatting
-            .replaceAll("{place}", userScore > 0 ? `${userScore}` : "0")
-            .replaceAll("{total}", newScore.score.toString())
-            .replaceAll(
-                "{symbol}",
-                appSettings[AppSetting.PointSymbol] as string
-            );
+        const flairText = formatFlair(flairFormatting, {
+            place: userScore > 0 ? `${userScore}` : "0",
+            total: newScore.score.toString(),
+            symbol: appSettings[AppSetting.PointSymbol] as string,
+            level: (await getLevelFromScore(context, username, newScore.score)).toString(),
+        });
 
         logger.info("Setting user flair", {
             username,

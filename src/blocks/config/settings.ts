@@ -70,10 +70,12 @@ export enum AppSetting {
     ExistingFlairHandling = "existingFlairHandling",
     CSSClass = "CSSClass",
     FlairTemplate = "flairTemplate",
+    LevelThresholds = "levelThresholds",
 }
 
 export enum TemplateDefaults {
-    FlairFormatting = "{total}{symbol} | #{place}",
+    LevelThresholds = "1|0\n2|100\n3|500\n4|1500\n5|5000\n6|15000\n7|50000\n8|100000",
+    FlairFormatting = "LVL {level} | {total}{symbol}",
     UnflairedPostMessage = "Points cannot be awarded on posts without flair. Please award only on flaired posts.",
     OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
     LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
@@ -533,6 +535,15 @@ export const appSettings: SettingsFormField[] = [
         label: "Point System Settings",
         fields: [
             {
+                type: "paragraph",
+                name: AppSetting.LevelThresholds,
+                label: "Level Thresholds (All placeholders allow single or double curly braces)",
+                helpText:
+                    "Level thresholds for users to reach. Format: `<level>|<points>` (e.g., `2|100` means level 2 = 100 points). Each threshold should be on a new line",
+                defaultValue: TemplateDefaults.LevelThresholds,
+                onValidate: levelThresholdIsValid,
+            },
+            {
                 type: "select",
                 name: AppSetting.AccessControl,
                 label: "Who can award points?",
@@ -563,7 +574,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.FlairFormatting,
                 label: "Flair Formatting (All placeholders allow single or double curly braces)",
                 helpText:
-                    "How the flair should be formatted. Placeholders Supported: place, total, symbol",
+                    "How the flair should be formatted. Placeholders Supported: place, total, symbol, level",
                 defaultValue: TemplateDefaults.FlairFormatting,
                 onValidate: stringOrParagraphFieldContainsText,
             },
@@ -1084,7 +1095,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Upgrade notifications",
                 name: AppSetting.UpgradeNotifier,
                 helpText:
-                    "Receive a message when a new version of RepBot is released",
+                    "Receive a message when a new version of VIPBot is released. This is currently a placeholder",
                 defaultValue: true,
             },
         ],
@@ -1158,5 +1169,28 @@ function stringOrParagraphFieldContainsText(
 
     if (event.value.length === 0) {
         return "Field cannot be empty (even if this is an irrelevant setting).";
+    }
+}
+
+function levelThresholdIsValid(
+    event: SettingsFormFieldValidatorEvent<string>,
+    _: TriggerContext,
+): string | void {
+    if (typeof event.value !== "string") {
+        return "Value must be a string.";
+    }
+
+    if (event.value.length === 0) {
+        return "Field cannot be empty (even if this is an irrelevant setting).";
+    }
+
+    const lines = event.value.split("\n").map((line) => line.trim());
+    if (lines.length === 0 || lines.some((line) => line === "")) {
+        return "You must specify at least one valid level threshold";
+    }
+
+    const levelThresholdRegex = /^(\d+)\|(\d+)$/;
+    if (!lines.every((line) => levelThresholdRegex.test(line))) {
+        return "Each level threshold must be formatted as `<level>|<points>` with no spaces before or after the bar";
     }
 }
