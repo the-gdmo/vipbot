@@ -1,8 +1,8 @@
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { userPointsKeyExists } from "../database/redis";
-import { getCurrentScore, ScoreResult } from "../utils/common-utils";
 import { PostSubmit } from "@devvit/protos";
+import { getCurrentScore, ScoreResult } from "../utils/common-utils";
 
 /**
  * Handles newly submitted posts.
@@ -27,7 +27,8 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         // Basic post information
         // ─────────────────────────────────────────────────────────
 
-        const subredditName = event.subreddit.name;
+        const subreddit = event.subreddit;
+        const subredditName = subreddit.name;
         const authorName = event.author.name;
         const postId = event.post.id;
         const postTitle = event.post.title ?? "";

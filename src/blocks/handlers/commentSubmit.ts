@@ -1,10 +1,10 @@
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { userPointsKeyExists } from "../database/redis";
-import { getCurrentScore, ScoreResult } from "../utils/common-utils";
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { AppSetting, NotifyOnBlockedUserReplyOptions } from "../config/settings";
 import { capitalize, formatMessageInCommentContext } from "../utils/formatting";
+import { getCurrentScore, ScoreResult } from "../utils/common-utils";
 /**
  * Handles newly submitted comments.
  *
@@ -30,13 +30,15 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
         // ─────────────────────────────────────────────────────────
 
         const settings = await context.settings.getAll();
-        const subredditName = event.subreddit.name;
+        const subreddit = event.subreddit;
+        const subredditName = subreddit.name;
         const authorName = event.author.name;
         const postId = event.comment.id;
         const commentBody = event.comment.body ?? "";
 
         logger.info("📨 Processing new comment", {
-            subreddit: subredditName,
+            subreddit: event.subreddit.name,
+subredditName,
             author: authorName,
             postId,
             body: commentBody,
@@ -70,7 +72,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
             : undefined;
 
         logger.debug("🔎 Comment information collected", {
-            subreddit: subredditName,
+            subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
             author: authorName,
             postId,
             body: commentBody,
@@ -88,7 +91,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
             logger.error(
                 "❌ Unable to retrieve user information onPostSubmit",
                 {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 },
             );
             return;
@@ -104,7 +108,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
             logger.info(
                 "⏭️ Ignoring point given by user who cannot give points",
                 {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                     author: authorName,
                 },
             );
@@ -129,7 +134,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
 
             await userWhoCannotAwardPointsMessageReply.distinguish();
             logger.info( "✅ User who cannot award points message submitted", {
-                subreddit: subredditName,
+                subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 authorName,
                 commentId: userWhoCannotAwardPointsMessageReply.id,
             });
@@ -152,19 +158,22 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
         );
         if (!USER_POINTS_KEY_EXISTS) {
             logger.info("❌ User points key not found. Setting to 0.", {
-                subreddit: subredditName,
+                subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 author: authorName,
             });
             const existingScore = await getCurrentScore(user, context);
             if (!existingScore) {
                 logger.error("❌ Unable to retrieve existing score for user", {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 });
                 const newScore: ScoreResult = {
                     score: 1,
                 };
                 logger.info(`✅ User points initialized`, {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                     author: authorName,
                     newScore: newScore.score,
                 });
@@ -181,7 +190,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
                     text: userPointsInitializedMessage,
                 });
                 logger.info( "✅ User points initialized message submitted", {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                     authorName,
                 });
 
@@ -191,7 +201,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
             const existingScore = await getCurrentScore(user, context);
             if (!existingScore) {
                 logger.error("❌ Unable to retrieve existing score for user", {
-                    subreddit: subredditName,
+                    subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 });
                 return;
             }
@@ -202,7 +213,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
                 flairIsNumber: existingScore.flairIsNumber,
             };
             logger.info(`✅ User points incremented by 1`, {
-                subreddit: subredditName,
+                subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
                 author: authorName,
                 newScore: newScore.score,
             });
@@ -210,7 +222,8 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
 
         // ─────────────────────────────────────────────────────────
         logger.info("✅ Post processed successfully", {
-            subreddit: subredditName,
+            subreddit: event.subreddit.name,
+subredditName: event.subreddit.name,
             author: authorName,
             postId,
         });
