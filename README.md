@@ -267,7 +267,7 @@ Flair can display information such as:
 
 For example:
 
-"`⭐ VIP`" or "`👑 VIP • Gold`"
+`⭐ VIP` or `👑 VIP • Gold`
 
 Flair functionality can be disabled if the subreddit does not want VIPBot to modify user flair.
 
@@ -382,7 +382,7 @@ The command prefix can be changed through the app settings.
 
 VIPBot supports placeholders in configurable messages and templates.
 
-Placeholders can use either single or double curly braces (ie "`{username}`" or "`{{username}}`")
+Placeholders can use either single or double curly braces (ie `{username}` or `{{username}}`)
 
 ### User Information
 
