@@ -66,7 +66,7 @@ Devvit.addTrigger({
             });
 
             // ─────────────────────────────────────────────────────────
-            // Ignore VIPBot2 and AutoModerator posts
+            // Ignore VIPBot and AutoModerator posts
             // ─────────────────────────────────────────────────────────
 
             if (
@@ -74,7 +74,7 @@ Devvit.addTrigger({
                 authorName.toLowerCase() === "automoderator"
             ) {
                 logger.debug(
-                    "⏭️ Ignoring post created by VIPBot2 or AutoModerator",
+                    "⏭️ Ignoring post created by VIPBot or AutoModerator",
                     {
                         postId,
                         author: authorName,
@@ -223,7 +223,7 @@ Devvit.addTrigger({
             });
 
             // ─────────────────────────────────────────────────────────
-            // Ignore VIPBot2 and AutoModerator posts
+            // Ignore VIPBot and AutoModerator posts
             // ─────────────────────────────────────────────────────────
 
             if (
@@ -231,7 +231,7 @@ Devvit.addTrigger({
                 authorName.toLowerCase() === "automoderator"
             ) {
                 logger.debug(
-                    "⏭️ Ignoring post created by VIPBot2 or AutoModerator",
+                    "⏭️ Ignoring post created by VIPBot or AutoModerator",
                     {
                         postId,
                         author: authorName,
@@ -480,7 +480,7 @@ Devvit.addTrigger({
         await context.scheduler.runJob({
             name: UPDATE_LEADERBOARD_JOB,
             runAt: new Date(),
-            data: { reason: "VIPBot2 has been installed or upgraded." },
+            data: { reason: "VIPBot has been installed or upgraded." },
         });
     },
 });
@@ -515,7 +515,7 @@ Devvit.addTrigger({
         await context.scheduler.runJob({
             name: UPDATE_LEADERBOARD_JOB,
             runAt: new Date(),
-            data: { reason: "VIPBot2 has been installed or upgraded." },
+            data: { reason: "VIPBot has been installed or upgraded." },
         });
     },
 });

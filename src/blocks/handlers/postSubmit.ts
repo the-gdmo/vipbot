@@ -7,7 +7,7 @@ import { PostSubmit } from "@devvit/protos";
 /**
  * Handles newly submitted posts.
  *
- * This is the main entry point for VIPBot2 post processing.
+ * This is the main entry point for VIPBot post processing.
  */
 export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
     try {
@@ -40,7 +40,7 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         });
 
         // ─────────────────────────────────────────────────────────
-        // Ignore VIPBot2 and AutoModerator posts
+        // Ignore VIPBot and AutoModerator posts
         // ─────────────────────────────────────────────────────────
 
         if (
@@ -48,7 +48,7 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
             authorName.toLowerCase() === "automoderator"
         ) {
             logger.debug(
-                "⏭️ Ignoring post created by VIPBot2 or AutoModerator",
+                "⏭️ Ignoring post created by VIPBot or AutoModerator",
                 {
                     postId,
                     author: authorName,

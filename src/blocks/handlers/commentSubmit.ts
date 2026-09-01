@@ -8,7 +8,7 @@ import { capitalize, formatMessageInCommentContext } from "../utils/formatting";
 /**
  * Handles newly submitted comments.
  *
- * This is the main entry point for VIPBot2 comment processing.
+ * This is the main entry point for VIPBot comment processing.
  */
 
 export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, context: TriggerContext) {
@@ -43,7 +43,7 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
         });
 
         // ─────────────────────────────────────────────────────────
-        // Ignore VIPBot2 and AutoModerator posts
+        // Ignore VIPBot and AutoModerator posts
         // ─────────────────────────────────────────────────────────
 
         if (
@@ -51,7 +51,7 @@ export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, cont
             authorName.toLowerCase() === "automoderator"
         ) {
             logger.debug(
-                "⏭️ Ignoring post created by VIPBot2 or AutoModerator",
+                "⏭️ Ignoring post created by VIPBot or AutoModerator",
                 {
                     postId,
                     author: authorName,
