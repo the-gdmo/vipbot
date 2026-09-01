@@ -1,9 +1,6 @@
 import { Devvit, User } from "@devvit/public-api";
 import { logger } from "./utils/logger";
-import {
-    getCurrentScore,
-    ScoreResult,
-} from "./utils/common-utils";
+import { getCurrentScore, ScoreResult } from "./utils/common-utils";
 import { userPointsKeyExists } from "./database/redis";
 import {
     CLEANUP_JOB,
@@ -13,14 +10,14 @@ import {
     UPDATE_MODINFO_JOB,
 } from "./config/constants";
 import { populateCleanupLogAndScheduleCleanup } from "./jobs/cleanup";
+import { AppSetting, NotifyOnBlockedUserReplyOptions, TemplateDefaults } from "./config/settings";
+import { capitalize } from "./utils/formatting";
 
 /**
- * VIPBot2
  *
  * Main Devvit Blocks entry point.
  *
- * All triggers are registered here. The actual functionality will be
- * implemented in separate files as we build the bot.
+ * All triggers/functionality are registered here.
  */
 
 // ─────────────────────────────────────────────────────────────
@@ -208,33 +205,38 @@ Devvit.addTrigger({
             }
 
             // ─────────────────────────────────────────────────────────
-            // Basic comment information
+            // Basic post information
             // ─────────────────────────────────────────────────────────
 
-            const subredditName = event.subreddit.name;
+            const settings = await context.settings.getAll();
+            const subreddit = event.subreddit;
+            const subredditName = subreddit.name;
             const authorName = event.author.name;
-            const commentId = event.comment.id;
+            const postId = event.comment.id;
             const commentBody = event.comment.body ?? "";
 
             logger.info("📨 Processing new comment", {
                 subreddit: subredditName,
                 author: authorName,
-                commentId,
+                postId,
                 body: commentBody,
             });
 
             // ─────────────────────────────────────────────────────────
-            // Ignore VIPBot2 and AutoModerator comments
+            // Ignore VIPBot2 and AutoModerator posts
             // ─────────────────────────────────────────────────────────
 
             if (
                 authorName === context.appSlug ||
                 authorName.toLowerCase() === "automoderator"
             ) {
-                logger.debug("⏭️ Ignoring comment created by VIPBot2", {
-                    commentId,
-                    author: authorName,
-                });
+                logger.debug(
+                    "⏭️ Ignoring post created by VIPBot2 or AutoModerator",
+                    {
+                        postId,
+                        author: authorName,
+                    },
+                );
 
                 return;
             }
@@ -243,16 +245,16 @@ Devvit.addTrigger({
             // Post URL
             // ─────────────────────────────────────────────────────────
 
-            const postUrl = event.comment.permalink
+            const commentUrl = event.comment.permalink
                 ? `https://www.reddit.com${event.comment.permalink}`
                 : undefined;
 
-            logger.debug("🔎 Post information collected", {
+            logger.debug("🔎 Comment information collected", {
                 subreddit: subredditName,
                 author: authorName,
-                commentId,
+                postId,
                 body: commentBody,
-                permalink: postUrl,
+                permalink: commentUrl,
             });
 
             let user: User | undefined;
@@ -273,6 +275,80 @@ Devvit.addTrigger({
             }
 
             //process event
+
+            const pointName =
+                (settings[AppSetting.PointName] as string) ?? "trophy";
+            const usersWhoCannotAwardPoints = settings[
+                AppSetting.UsersWhoCannotAwardPoints
+            ] as string[] | undefined;
+            if (usersWhoCannotAwardPoints?.includes(authorName)) {
+                logger.info(
+                    "⏭️ Ignoring point given by user who cannot give points",
+                    {
+                        subreddit: subredditName,
+                        author: authorName,
+                    },
+                );
+
+                const userWhoCannotAwardPointsMessage =
+                    (settings[
+                        AppSetting.UsersWhoCannotAwardPointsMessage
+                    ] as string) ??
+                    `You do not have permission to award VIP points to users. [Message the mods]({modmailLink}) if you have any questions.`;
+                let result = userWhoCannotAwardPointsMessage;
+                const singlePointName = new RegExp(`{name}`, "gi");
+                const doublePointName = new RegExp(`{{name}}`, "gi");
+                if (doublePointName.test(result)) {
+                    logger.debug(`Replacing {{name}} with ${pointName}`);
+                    result = result.replaceAll(doublePointName, pointName);
+                } else if (singlePointName.test(result)) {
+                    logger.debug(`Replacing {{name}} with ${pointName}`);
+                    result = result.replaceAll(singlePointName, pointName);
+                }
+
+                const footer = `\n\n---\n\n^(I am a bot — [contact the mods of r/${event.subreddit.name}](https://reddit.com/message/compose?to=r/${event.subreddit.name}) with any questions or [r/TheRepBot](https://www.reddit.com/message/compose?to=r/TheRepBot) to talk directly with my developer)`;
+                if (!result.trim().endsWith(footer)) {
+                    result = result.trim() + footer;
+                }
+
+                const notifyUsersWhoCannotAwardPoints = ((settings[
+                    AppSetting.NotifyOnNormalAwardFail
+                ] as string[] | undefined) ?? [
+                    NotifyOnBlockedUserReplyOptions.NoReply,
+                ])[0] as NotifyOnBlockedUserReplyOptions;
+
+                if (
+                    notifyUsersWhoCannotAwardPoints ===
+                    NotifyOnBlockedUserReplyOptions.ReplyAsComment
+                ) {
+                    const userWhoCannotAwardPointsMessageReply =
+                        await context.reddit.submitComment({
+                            id: event.comment.id,
+                            text: result,
+                        });
+
+                    await userWhoCannotAwardPointsMessageReply.distinguish();
+                    logger.info(
+                        "✅ User who cannot award points message submitted",
+                        {
+                            subreddit: subredditName,
+                            authorName,
+                            commentId: userWhoCannotAwardPointsMessageReply.id,
+                        },
+                    );
+                    return;
+                } else if (
+                    notifyUsersWhoCannotAwardPoints ===
+                    NotifyOnBlockedUserReplyOptions.ReplyByPM
+                ) {
+                    await context.reddit.sendPrivateMessage({
+                        to: authorName,
+                        text: result,
+                        subject: `You do not have permission to award ${pointName}s to users`,
+                    });
+                }
+            }
+
             const USER_POINTS_KEY_EXISTS = await userPointsKeyExists(
                 context,
                 subredditName,
@@ -292,13 +368,47 @@ Devvit.addTrigger({
                         },
                     );
                     const newScore: ScoreResult = {
-                        score: 0,
+                        score: 1,
                     };
                     logger.info(`✅ User points initialized`, {
                         subreddit: subredditName,
                         author: authorName,
                         newScore: newScore.score,
                     });
+                    const userPointsInitializedMessage = settings[AppSetting.UserPointsInitializedMessage] as string ?? TemplateDefaults.UserPointsInitializedMessage;
+                    let result = userPointsInitializedMessage;
+                    const singlePointName = new RegExp(`{name}`, "gi");
+                    const doublePointName = new RegExp(`{{name}}`, "gi");
+                    if (doublePointName.test(result)) {
+                        logger.debug(
+                            `Replacing {{name}} with ${pointName}`,
+                        );
+                        result = result.replaceAll(doublePointName, pointName);
+                    } else if (singlePointName.test(result)) {
+                        logger.debug(
+                            `Replacing {{name}} with ${pointName}`,
+                        );
+                        result = result.replaceAll(singlePointName, pointName);
+                    }
+
+                    const footer = `\n\n---\n\n^(I am a bot — [contact the mods of r/${event.subreddit.name}](https://reddit.com/message/compose?to=r/${event.subreddit.name}) with any questions or [r/TheRepBot](https://www.reddit.com/message/compose?to=r/TheRepBot) to talk directly with my developer)`;
+                    if (!result.trim().endsWith(footer)) {
+                        result = result.trim() + footer;
+                    }
+
+                    await context.reddit.sendPrivateMessage({
+                        to: authorName,
+                        subject: `${capitalize(pointName)}s Initialized`,
+                        text: userPointsInitializedMessage,
+                    });
+                    logger.info(
+                        "✅ User points initialized message submitted",
+                        {
+                            subreddit: subredditName,
+                            authorName,
+                        },
+                    );
+
                     return;
                 }
             } else {
@@ -329,10 +439,10 @@ Devvit.addTrigger({
             logger.info("✅ Post processed successfully", {
                 subreddit: subredditName,
                 author: authorName,
-                commentId,
+                postId,
             });
         } catch (error) {
-            logger.error("❌ Error processing comment submission", {
+            logger.error("❌ Error processing post submission", {
                 error,
             });
         }

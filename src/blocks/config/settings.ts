@@ -5,16 +5,151 @@ import {
 } from "@devvit/public-api";
 
 export enum AppSetting {
+    PointTriggerWords = "pointTriggerWords",
+    PointSymbol = "pointSymbol",
     AccessControl = "accessControl",
     FlairFormatting = "flairFormatting",
     LeaderboardSize = "leaderboardSize",
     UsersWhoCannotAwardPoints = "usersWhoCannotAwardPoints",
-    notifyOnNormalAwardFail = "notifyOnNormalAwardFail",
+    NotifyOnNormalAwardFail = "notifyOnNormalAwardFail",
     UsersWhoCannotAwardPointsMessage = "usersWhoCannotAwardPointsMessage",
     PointName = "pointName",
     NotifyOnNormalAwardSuccess = "notifyOnNormalAwardSuccess",
     NormalAwardSuccessMessage = "normalAwardSuccessMessage",
-    
+    ModAwardCommand = "modAwardCommand",
+    SuperUsers = "superUsers",
+    NotifyOnAutoSuperuser = "notifyOnAutoSuperuser",
+    AutoSuperuserThreshold = "autoSuperuserThreshold",
+    AutoSuperuserTemplate = "autoSuperuserTemplate",
+    NotifyOnTrustedUserAwardSuccess = "notifyOnTrustedUserAwardSuccess",
+    TrustedUserAwardSuccessMessage = "trustedUserAwardSuccessMessage",
+    NotifyOnModAwardSuccess = "notifyOnModAwardSuccess",
+    ModAwardCommandSuccess = "modAwardCommandSuccess",
+    NotifyOnModAwardFail = "notifyOnModAwardFail",
+    ModAwardCommandFail = "modAwardCommandFail",
+    ModAwardAlreadyGiven = "modAwardAlreadyGiven",
+    UserPointsInitializedMessage = "UserPointsInitializedMessage",
+}
+
+export enum TemplateDefaults {
+    FlairFormatting = "{total}{symbol} | #{place}",
+    UnflairedPostMessage = "Points cannot be awarded on posts without flair. Please award only on flaired posts.",
+    OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
+    LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
+    DisallowedFlairMessage = "Points cannot be awarded on posts with this flair. Please choose another post.",
+    UsersWhoCannotAwardPointsMessage = `You do not have permission to award VIP points to users. [Message The Mods]({modmailLink}) if you have any questions.`,
+    ModOnlyDisallowedMessage = "Only moderators allowed to award points.",
+    ApprovedOnlyDisallowedMessage = "Only moderators and approved users can award points.",
+    SelfAwardMessage = "You can't award yourself a {name}.",
+    BotAwardMessage = "You can't award u/{awardee} {name}s.",
+    SelfAwardTemplate = "Hello {awarder}, you cannot award a {name} to yourself.",
+    NotifyOnNormalAwardSuccessTemplate = "+1 {name} awarded to u/{awardee} by u/{awarder}. Total: {total}{symbol}. {awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
+    NotifyOnSuperuserTemplate = "Hello {awardee},\n\nNow that you have reached {threshold} points you can now award points yourself, even if normal users do not have permission to. Please use the command `{command}` if you'd like to do this.",
+    InitialMessageToRestrictedUsers = "***ATTENTION to OP:*** You must award at least {requirement} {name}s by replying to the successful comments. Valid command(s) are {commandsWithAnd}. Failure to do so may result in a ban.\n\n*^ To hide text, write it like this `>!Text goes here!<` = >!Text goes here!<. [Reddit Markdown Guide]({markdownGuide})*.",
+    PointAlreadyAwardedToUserMessage = "{awardee} has already received a {name} for this post.",
+    ModAwardCommandSuccessMessage = "Moderator u/{awarder} gave an award! u/{awardee} now has {total}{symbol} {name}s. {awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
+    ModAwardCommandFailMessage = "Hello {awarder}. You must be a moderator or trusted user to use {command}.",
+    ModAwardAlreadyGivenMessage = "{awardee} has already received a mod award for this comment.",
+    UsernameLengthMessage = "u/{awardee} is not valid. Reddit usernames are between 3 and 21 characters long.",
+    InvalidUsernameMessage = "Your target is not valid. Reddit usernames contain only letters, numbers, hyphens, and underscores.",
+    NoUsernameMentionMessage = "You must mention a user (eg u/{awardee}) to award specific users.",
+    RestrictionLiftedMessage = "Your posting restriction has been removed. You now have permission to make a post again in r/{subreddit}!",
+    PostAuthorAwardMessage = "OPs cannot be awarded points.",
+    TrustedUserAwardSuccessMessage = "Superuser u/{awarder} gave an award! u/{awardee} now has {total}{symbol} {name}s. {awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
+    ModsAndPostAuthorDisallowedMessage = "Only moderators and Post Authors (OPs) can award {name}s.",
+    UserPointsInitializedMessage = "Your {name} points have been initialized to 1. [Message the mods]({modmailLink}) if you have any questions.",
+}
+
+export enum AutoSuperuserReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnModOnlyDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnModAndPostAuthorDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnPostAuthorAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnApprovedOnlyDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnOPOnlyDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnDisallowedFlairReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnUnflairedPostReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum PointAwardedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnSelfAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnBlockedUserReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyUsersWhoCannotAwardPointsReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnBotAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum LeaderboardMode {
+    SubredditPermissions = "subredditpermissions",
+    ModOnly = "modonly",
+    ApprovedContributorsOnly = "approvedcontributorsonly",
+    Off = "off",
+    CurrentWikiSettings = "currentwikisettings",
 }
 
 export enum AccessControlOptions {
@@ -24,6 +159,200 @@ export enum AccessControlOptions {
     ModsAndPostAuthor = "moderators-and-op",
     Everyone = "everyone",
 }
+
+export enum NotifyOnPointAlreadyAwardedToUserReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnModAwardSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnTrustedUserAwardSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export enum NotifyOnModAwardFailReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+const NotifyOnModAndPostAuthorDisallowedReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnModAndPostAuthorDisallowedReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnModAndPostAuthorDisallowedReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnModAndPostAuthorDisallowedReplyOptions.ReplyAsComment,
+    },
+];
+
+export const NotifyOnBlockedUserReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnBlockedUserReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnBlockedUserReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnBlockedUserReplyOptions.ReplyAsComment,
+    },
+];
+
+export const NotifyOnPostAuthorAwardReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnPostAuthorAwardReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnPostAuthorAwardReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnPostAuthorAwardReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyUsersWhoCannotAwardPointsReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnBotAwardReplyOptionChoices = [
+    {
+        label: "Send user a private message",
+        value: NotifyOnBotAwardReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnBotAwardReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnModOnlyDisallowedReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnModOnlyDisallowedReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnApprovedOnlyDisallowedReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnApprovedOnlyDisallowedReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnApprovedOnlyDisallowedReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnApprovedOnlyDisallowedReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnOPOnlyDisallowedReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnOPOnlyDisallowedReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnOPOnlyDisallowedReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnDisallowedFlairReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnDisallowedFlairReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnDisallowedFlairReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnDisallowedFlairReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnUnflairedPostReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnUnflairedPostReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnUnflairedPostReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnUnflairedPostReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnSelfAwardReplyOptionChoices = [
+    { label: "No Notification", value: NotifyOnSelfAwardReplyOptions.NoReply },
+    {
+        label: "Send user a private message",
+        value: NotifyOnSelfAwardReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnSelfAwardReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnSuccessReplyOptionChoices = [
+    { label: "No Notification", value: NotifyOnSuccessReplyOptions.NoReply },
+    {
+        label: "Send user a private message",
+        value: NotifyOnSuccessReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnSuccessReplyOptions.ReplyAsComment,
+    },
+];
 
 const AccessControlOptionChoices = [
     {
@@ -48,24 +377,92 @@ const AccessControlOptionChoices = [
     },
 ];
 
-export enum notifyOnNormalAwardFailReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
+const LeaderboardModeOptionChoices = [
+    { label: "Off", value: LeaderboardMode.Off },
+    {
+        label: "Current Wiki Settings",
+        value: LeaderboardMode.CurrentWikiSettings,
+    },
+    { label: "Mod Only", value: LeaderboardMode.ModOnly },
+    {
+        label: "Approved Contributors Only",
+        value: LeaderboardMode.ApprovedContributorsOnly,
+    },
+    {
+        label: "Default settings for wiki",
+        value: LeaderboardMode.SubredditPermissions,
+    },
+];
 
-const notifyOnNormalAwardFailOptionChoices = [
+const NotifyOnPointAlreadyAwardedToUserOptionChoices = [
     {
         label: "No Notification",
-        value: notifyOnNormalAwardFailReplyOptions.NoReply,
+        value: NotifyOnPointAlreadyAwardedToUserReplyOptions.NoReply,
     },
     {
         label: "Send user a private message",
-        value: notifyOnNormalAwardFailReplyOptions.ReplyByPM,
+        value: NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyByPM,
     },
     {
         label: "Reply as comment",
-        value: notifyOnNormalAwardFailReplyOptions.ReplyAsComment,
+        value: NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnTrustedUserAwardSuccessOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnModAwardSuccessOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnModAwardSuccessReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnModAwardSuccessReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnModAwardSuccessReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnModAwardFailOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnModAwardFailReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnModAwardFailReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnModAwardFailReplyOptions.ReplyAsComment,
+    },
+];
+
+const NotifyOnAutoSuperuserReplyOptionChoices = [
+    { label: "No Notification", value: AutoSuperuserReplyOptions.NoReply },
+    {
+        label: "Send user a private message",
+        value: AutoSuperuserReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: AutoSuperuserReplyOptions.ReplyAsComment,
     },
 ];
 
@@ -82,10 +479,17 @@ export const appSettings: SettingsFormField[] = [
                 label: "Who can award points?",
                 helpText: "Choose who is allowed to award points",
                 options: AccessControlOptionChoices,
-                defaultValue: [
-                    AccessControlOptions.ModsAndSuperusers,
-                ],
+                defaultValue: [AccessControlOptions.ModsAndSuperusers],
                 onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.PointTriggerWords,
+                label: "Trigger Words",
+                helpText:
+                    "List of trigger words users can type to award points (e.g., !award, .point). Each command should be on a new line.",
+                defaultValue: "!award\n.award",
+                onValidate: validateTriggerWords,
             },
             {
                 type: "string",
@@ -98,11 +502,17 @@ export const appSettings: SettingsFormField[] = [
             },
             {
                 type: "string",
+                name: AppSetting.PointSymbol,
+                label: "Point Symbol",
+                helpText: "Optional emoji or character to show alongside point totals. Leave empty for no symbol",
+            },
+            {
+                type: "string",
                 name: AppSetting.FlairFormatting,
                 label: "Flair Formatting (All placeholders allow single or double curly braces)",
                 helpText:
                     "The format for displaying flair information. Placeholders Supported: total, symbol, place",
-                defaultValue: "{total}{symbol} | #{place}",
+                defaultValue: TemplateDefaults.FlairFormatting,
                 onValidate: stringOrParagraphFieldContainsText,
             },
         ],
@@ -114,13 +524,11 @@ export const appSettings: SettingsFormField[] = [
         fields: [
             {
                 type: "select",
-                name: AppSetting.notifyOnNormalAwardFail,
+                name: AppSetting.NotifyOnNormalAwardFail,
                 label: "Notify users when they are not allowed to award VIP points",
                 helpText: "",
-                options: notifyOnNormalAwardFailOptionChoices,
-                defaultValue: [
-                    notifyOnNormalAwardFailReplyOptions.ReplyByPM,
-                ],
+                options: NotifyOnBlockedUserReplyOptionChoices,
+                defaultValue: [NotifyOnBlockedUserReplyOptions.ReplyByPM],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -136,7 +544,114 @@ export const appSettings: SettingsFormField[] = [
                 label: "Users Who Cannot Be Awarded Points Message (All placeholders allow single or double curly braces)",
                 helpText:
                     "Message to send users if they aren't allowed to award VIP Points. Placeholders Supported: modmailLink",
-                defaultValue: `You do not have permission to award VIP points to users. [Message The Mods]({modmailLink}) if you have any questions.`,
+                defaultValue: TemplateDefaults.UsersWhoCannotAwardPointsMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+        ],
+    },
+    {
+        type: "group",
+        label: "Moderator/Trusted User Settings",
+        fields: [
+            {
+                type: "paragraph",
+                name: AppSetting.SuperUsers,
+                label: "A list of trusted users other than mods who can award points",
+                helpText: "Each username should be on a new line",
+            },
+            {
+                name: AppSetting.ModAwardCommand,
+                type: "string",
+                label: "Trusted User/Mod award command",
+                helpText:
+                    "Optional. Alternate command for mods and trusted users to award reputation points",
+                defaultValue: "!modaward",
+                onValidate: validateModTriggerCommand,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnAutoSuperuser,
+                label: "Notify users who reach the auto trusted user threshold",
+                options: NotifyOnAutoSuperuserReplyOptionChoices,
+                multiSelect: false,
+                defaultValue: [AutoSuperuserReplyOptions.NoReply],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "number",
+                name: AppSetting.AutoSuperuserThreshold,
+                label: "Treat users with this many points as automatically a trusted user",
+                helpText:
+                    "If zero, only explicitly named users above will be treated as trusted users",
+                onValidate: numberFieldHasValidOption,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.AutoSuperuserTemplate,
+                label: "Message sent when a user reaches the trusted user threshold (All placeholders allow single or double curly braces)",
+                helpText: "Placeholders Supported: name, threshold, command",
+                defaultValue: TemplateDefaults.NotifyOnSuperuserTemplate,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                label: "Notify on trusted user award success",
+                name: AppSetting.NotifyOnTrustedUserAwardSuccess,
+                options: NotifyOnTrustedUserAwardSuccessOptionChoices,
+                defaultValue: [
+                    NotifyOnTrustedUserAwardSuccessReplyOptions.NoReply,
+                ],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.TrustedUserAwardSuccessMessage,
+                label: "Trusted User Award Success Message (All placeholders allow single or double curly braces)",
+                helpText: `Optional. Message to send users when a trusted user awards a point. Placeholders Supported: awardeePage, awarderPage, awardee, awarder, symbol, total, name, leaderboard`,
+                defaultValue: TemplateDefaults.TrustedUserAwardSuccessMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.NotifyOnModAwardSuccess,
+                type: "select",
+                label: "Notify on mod award success",
+                helpText:
+                    "How to notify users when a moderator or trusted user awards a point",
+                options: NotifyOnModAwardSuccessOptionChoices,
+                defaultValue: [NotifyOnModAwardSuccessReplyOptions.NoReply],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.ModAwardCommandSuccess,
+                type: "paragraph",
+                label: "Mod Award Success Message (All placeholders allow single or double curly braces)",
+                helpText: `Optional. Message to send users when they successfully award a message with the "Trusted User/Mod award command". Placeholders Supported: awardeePage, awarderPage, awardee, awarder, symbol, total, name, leaderboard`,
+                defaultValue: TemplateDefaults.ModAwardCommandSuccessMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.NotifyOnModAwardFail,
+                type: "select",
+                label: "Notify on mod award fail",
+                helpText: "",
+                options: NotifyOnModAwardFailOptionChoices,
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.ModAwardCommandFail,
+                type: "paragraph",
+                label: "Mod Award Fail Message (All placeholders allow single or double curly braces)",
+                helpText: `Optional. Message to send users when they aren't allowed to use the "Trusted User/Mod award command". Placeholders Supported: command, name, awarder, awardee`,
+                defaultValue: TemplateDefaults.ModAwardCommandFailMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.ModAwardAlreadyGiven,
+                type: "paragraph",
+                label: `Message to send user when the "Trusted User/Mod award command" has already been used on the comment (All placeholders allow single or double curly braces)`,
+                helpText:
+                    "Optional. Placeholders Supported: awarder, awardee, name",
+                defaultValue: TemplateDefaults.ModAwardAlreadyGivenMessage,
                 onValidate: stringOrParagraphFieldContainsText,
             },
         ],

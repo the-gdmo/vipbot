@@ -1,16 +1,17 @@
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { userPointsKeyExists } from "../database/redis";
-import { capitalize, formatMessageInPostContext, getCurrentScore, ScoreResult } from "../utils/common-utils";
-import { CommentSubmit } from "@devvit/protos";
-import { AppSetting, notifyOnNormalAwardFailReplyOptions } from "../config/settings";
+import { getCurrentScore, ScoreResult } from "../utils/common-utils";
+import { CommentSubmit, CommentUpdate } from "@devvit/protos";
+import { AppSetting, NotifyOnBlockedUserReplyOptions } from "../config/settings";
+import { capitalize, formatMessageInCommentContext } from "../utils/formatting";
 /**
  * Handles newly submitted comments.
  *
  * This is the main entry point for VIPBot2 comment processing.
  */
 
-export async function onCommentSubmit(event: CommentSubmit, context: TriggerContext) {
+export async function onCommentSubmit(event: CommentSubmit | CommentUpdate, context: TriggerContext) {
     try {
         // ─────────────────────────────────────────────────────────
         // Validate event data
@@ -107,7 +108,7 @@ export async function onCommentSubmit(event: CommentSubmit, context: TriggerCont
                     author: authorName,
                 },
             );
-            const userWhoCannotAwardPointsMessage = formatMessageInPostContext(
+            const userWhoCannotAwardPointsMessage = formatMessageInCommentContext(
                 event,
                 settings[AppSetting.UsersWhoCannotAwardPointsMessage] as string ?? `You do not have permission to award VIP points to users. [Message the mods]({modmailLink}) if you have any questions.`,
                 {
@@ -115,12 +116,12 @@ export async function onCommentSubmit(event: CommentSubmit, context: TriggerCont
                 },
             );
             const notifyUsersWhoCannotAwardPoints = ((settings[
-        AppSetting.notifyOnNormalAwardFail
+        AppSetting.NotifyOnNormalAwardFail
     ] as string[] | undefined) ?? [
-        notifyOnNormalAwardFailReplyOptions.NoReply,
-    ])[0] as notifyOnNormalAwardFailReplyOptions;
+        NotifyOnBlockedUserReplyOptions.NoReply,
+    ])[0] as NotifyOnBlockedUserReplyOptions;
             
-    if (notifyUsersWhoCannotAwardPoints === notifyOnNormalAwardFailReplyOptions.ReplyAsComment) {
+    if (notifyUsersWhoCannotAwardPoints === NotifyOnBlockedUserReplyOptions.ReplyAsComment) {
         const userWhoCannotAwardPointsMessageReply = await context.reddit.submitComment({
                 id: event.comment.id,
                 text: userWhoCannotAwardPointsMessage,
@@ -133,7 +134,7 @@ export async function onCommentSubmit(event: CommentSubmit, context: TriggerCont
                 commentId: userWhoCannotAwardPointsMessageReply.id,
             });
             return;
-        }else if (notifyUsersWhoCannotAwardPoints === notifyOnNormalAwardFailReplyOptions.ReplyByPM) {
+        }else if (notifyUsersWhoCannotAwardPoints === NotifyOnBlockedUserReplyOptions.ReplyByPM) {
             await context.reddit.sendPrivateMessage({
                 to: authorName,
                 text: userWhoCannotAwardPointsMessage,
@@ -167,7 +168,7 @@ export async function onCommentSubmit(event: CommentSubmit, context: TriggerCont
                     author: authorName,
                     newScore: newScore.score,
                 });
-                const userPointsInitializedMessage = formatMessageInPostContext(
+                const userPointsInitializedMessage = formatMessageInCommentContext(
                     event,
                     `Your ${pointName} points have been initialized to 1.`,
                     {

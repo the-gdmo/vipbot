@@ -13,13 +13,25 @@ You can also set an optional post flair if important users respond to the post.
 I recommend testing settings out on a test subreddit before deploying to a real subreddit for the first time.
 
 ## Supported Placeholders
-* `{{author}}`: The username of the poster. Will not contain 'u/'.
-* `{{userPage}}`: Link to a page that lets a user know exactly when they will be unbanned.
-* `{{minimum}}`: The minimum age of an account before they are allowed to make posts.
-* `{{permalink}}`: Link to the most recent post by the poster.
-* `{{title}}`: The title of the most recent valid post by the poster.
-* `{{subreddit}}`: Get the name of the subreddit. Will not contain 'r/'.
-
+NOTE: All placeholders can use single or double curly braces (ie {placeholderBeingUsed} or {{placeholderBeingUsed}})
+* `author`: The username of the poster. Will not contain 'u/'.
+* `name`: The name of points. Specified in 'VIP Point Name'.
+* `permalink`: Link to the most recent comment or post by the commentor/poster.
+* `title`: The title of the most recent valid post by the poster.
+* `symbol`: The symbol associated with your subreddit installation. Specified in 'Point Symbol'.
+* `awardee`: The user being awarded. Will not contain 'u/'.
+* `awarder`: The user giving the award. Will not contain 'u/'.
+* `total`: The total amount of points a user has.
+* `helpPage`: Link to a page explaining how to use the bot (NOTE: Page must exist to work properly). Uses the Old Reddit version of this page.
+* `leaderboard`: Link to a page of the subreddit's leaderboard. Uses the Old Reddit version of this page.
+* `command`: Notifies the user who has reached the threshold of a special command they can use. Specified in 'Superuser/Mod award command'.
+* `commandsWithOr`: Lists all valid non-superuser/non-mod command(s) specified in 'Trigger Words'. (comma-separated list (if more than 1) (eg "!award, ?award, or /award", "!award or /award")).
+* `commandsWithAnd`: Lists all valid non-superuser/non-mod command(s) specified in 'Trigger Words'. (comma-separated list (if more than 1) (eg "!award, ?award, and /award", "!award and /award")). 
+* `markdownGuide`: Link to Reddit's Markdown Guide.
+* `subreddit`: Get the name of the subreddit. Will not contain 'r/'.
+* `awardeePage`: Link to a recipient's individual page. Logs all points received and given.
+* `awarderPage`: Link to an awarder's individual page. Logs all points received and given.
+* `place`: Display the placement of the user in their flair. Usable in 'Flair Formatting'.
 ## Data Stored
 
 This application stores how old each user's account is in a Redis data store (when using the account restriction feature). It also stores a record that a comment has been pinned by it.
@@ -39,6 +51,9 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 NOTE: If you remove the app from your subreddit, it will delete all data and you will have to manually restore any related data to users. 
 
 ## Version History
+### 1.0.0
+* Bring the bot into an up-and-running state
+* List all placeholders in the README
 ### 0.0.2
 * Simplify README as much as possible
 * Change messaging logic to link to my developer instead of a separate subreddit
