@@ -3,7 +3,7 @@ import {
 } from "./config/settings";
 import { onPostSubmit } from "./handlers/postSubmit";
 import { onCommentSubmit } from "./handlers/commentSubmit";
-import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/InstallEvents";
+import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/installEvents";
 import { Devvit } from "@devvit/public-api";
 
 /**

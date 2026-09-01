@@ -26,9 +26,50 @@ export enum AppSetting {
     NotifyOnModAwardSuccess = "notifyOnModAwardSuccess",
     ModAwardCommandSuccess = "modAwardCommandSuccess",
     NotifyOnModAwardFail = "notifyOnModAwardFail",
-    ModAwardCommandFail = "modAwardCommandFail",
-    ModAwardAlreadyGiven = "modAwardAlreadyGiven",
-    UserPointsInitializedMessage = "UserPointsInitializedMessage",
+    ModAwardCommandFailMessage = "modAwardCommandFailMessage",
+    ModAwardAlreadyGivenMessage = "modAwardAlreadyGiven",
+    UserPointsInitializedMessage = "userPointsInitializedMessage",
+    NotifyUsersWhenPointsAreInitialized = "notifyUsersWhenPointsAreInitialized",
+    PointsAreInitializedMessage = "pointsAreInitializedMessage",
+    AllowUsersToReceivePointsOnPostSubmit = "allowUsersToReceivePointsOnPostSubmit",
+    AllowUsersToReceivePointsOnCommentSubmit = "allowUsersToReceivePointsOnCommentSubmit",
+    AllowUnflairedPosts = "allowUnflairedPosts",
+    NotifyOnUnflairedPost = "notifyOnUnflairedPost",
+    UnflairedPostMessage = "unflairedPostMessage",
+    NotifyOnPointAlreadyAwardedToUser = "notifyOnPointAlreadyAwardedToUser",
+    PointAlreadyAwardedToUserMessage = "pointAlreadyAwardedToUserMessage",
+    NotifyOnPostAuthorAward = "notifyOnPostAuthorAward",
+    PostAuthorAwardMessage = "postAuthorAwardMessage",
+    NotifyOnModOnlyDisallowed = "notifyOnModOnlyDisallowed",
+    ModOnlyDisallowedMessage = "modOnlyDisallowedMessage",
+    NotifyOnModsAndPostAuthorDisallowed = "notifyOnModsAndPostAuthorDisallowed",
+    ModsAndPostAuthorDisallowedMessage = "modsAndPostAuthorDisallowedMessage",
+    NotifyOnApprovedOnlyDisallowed = "notifyOnApprovedOnlyDisallowed",
+    ApprovedOnlyDisallowedMessage = "approvedOnlyDisallowedMessage",
+    NotifyOnOPOnlyDisallowed = "notifyOnOPOnlyDisallowed",
+    OPOnlyDisallowedMessage = "opOnlyDisallowedMessage",
+    NotifyOnDisallowedFlair = "notifyOnDisallowedFlair",
+    DisallowedFlairs = "disallowedFlairs",
+    DisallowedFlairMessage = "disallowedFlairMessage",
+    NotifyOnSelfAward = "notifyOnSelfAward",
+    SelfAwardMessage = "selfAwardMessage",
+    NotifyOnSuccess = "notifyOnSuccess",
+    SuccessMessage = "successMessage",
+    NotifyUsersWhoCannotAwardPoints = "notifyUsersWhoCannotAwardPoints",
+    NotifyOnBlockedUser = "notifyOnBlockedUser",
+    NotifyOnBotAward = "notifyOnBotAward",
+    BotAwardMessage = "botAwardMessage",
+    LeaderboardMode = "leaderboardMode",
+    DiscordServerLink = "discordServerLink",
+    LeaderboardName = "leaderboardName",
+    PointSystemHelpPage = "pointSystemHelpPage",
+    DigestNewMessageEachDay = "digestNewMessageEachDay",
+    DigestFrequency = "digestFrequency",
+    DigestAsModNotification = "digestAsModNotification",
+    UpgradeNotifier = "upgradeNotifier",
+    ExistingFlairHandling = "existingFlairHandling",
+    CSSClass = "CSSClass",
+    FlairTemplate = "flairTemplate",
 }
 
 export enum TemplateDefaults {
@@ -66,119 +107,41 @@ export enum AutoSuperuserReplyOptions {
     ReplyAsComment = "replybycomment",
 }
 
+const NotifyOnAutoSuperuserReplyOptionChoices = [
+    { label: "No Notification", value: AutoSuperuserReplyOptions.NoReply },
+    {
+        label: "Send user a private message",
+        value: AutoSuperuserReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: AutoSuperuserReplyOptions.ReplyAsComment,
+    },
+];
+
+
 export enum NotifyOnModOnlyDisallowedReplyOptions {
     NoReply = "none",
     ReplyByPM = "replybypm",
     ReplyAsComment = "replybycomment",
 }
 
+const NotifyOnModOnlyDisallowedReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnModOnlyDisallowedReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment,
+    },
+];
+
 export enum NotifyOnModAndPostAuthorDisallowedReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnPostAuthorAwardReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnApprovedOnlyDisallowedReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnOPOnlyDisallowedReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnDisallowedFlairReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnUnflairedPostReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnSuccessReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum PointAwardedReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnSelfAwardReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnBlockedUserReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyUsersWhoCannotAwardPointsReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnBotAwardReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum LeaderboardMode {
-    SubredditPermissions = "subredditpermissions",
-    ModOnly = "modonly",
-    ApprovedContributorsOnly = "approvedcontributorsonly",
-    Off = "off",
-    CurrentWikiSettings = "currentwikisettings",
-}
-
-export enum AccessControlOptions {
-    ModsOnly = "moderators-only",
-    ModsAndSuperusers = "moderators-and-superusers",
-    ModsSuperusersAndPostAuthor = "moderators-superusers-and-op",
-    ModsAndPostAuthor = "moderators-and-op",
-    Everyone = "everyone",
-}
-
-export enum NotifyOnPointAlreadyAwardedToUserReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnModAwardSuccessReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnTrustedUserAwardSuccessReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-export enum NotifyOnModAwardFailReplyOptions {
     NoReply = "none",
     ReplyByPM = "replybypm",
     ReplyAsComment = "replybycomment",
@@ -199,20 +162,11 @@ const NotifyOnModAndPostAuthorDisallowedReplyOptionChoices = [
     },
 ];
 
-export const NotifyOnBlockedUserReplyOptionChoices = [
-    {
-        label: "No Notification",
-        value: NotifyOnBlockedUserReplyOptions.NoReply,
-    },
-    {
-        label: "Send user a private message",
-        value: NotifyOnBlockedUserReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnBlockedUserReplyOptions.ReplyAsComment,
-    },
-];
+export enum NotifyOnPostAuthorAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 export const NotifyOnPostAuthorAwardReplyOptionChoices = [
     {
@@ -229,46 +183,11 @@ export const NotifyOnPostAuthorAwardReplyOptionChoices = [
     },
 ];
 
-const NotifyUsersWhoCannotAwardPointsReplyOptionChoices = [
-    {
-        label: "No Notification",
-        value: NotifyUsersWhoCannotAwardPointsReplyOptions.NoReply,
-    },
-    {
-        label: "Send user a private message",
-        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyAsComment,
-    },
-];
-
-const NotifyOnBotAwardReplyOptionChoices = [
-    {
-        label: "Send user a private message",
-        value: NotifyOnBotAwardReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnBotAwardReplyOptions.ReplyAsComment,
-    },
-];
-
-const NotifyOnModOnlyDisallowedReplyOptionChoices = [
-    {
-        label: "No Notification",
-        value: NotifyOnModOnlyDisallowedReplyOptions.NoReply,
-    },
-    {
-        label: "Send user a private message",
-        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment,
-    },
-];
+export enum NotifyOnApprovedOnlyDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 const NotifyOnApprovedOnlyDisallowedReplyOptionChoices = [
     {
@@ -285,6 +204,12 @@ const NotifyOnApprovedOnlyDisallowedReplyOptionChoices = [
     },
 ];
 
+export enum NotifyOnOPOnlyDisallowedReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
 const NotifyOnOPOnlyDisallowedReplyOptionChoices = [
     {
         label: "No Notification",
@@ -299,6 +224,12 @@ const NotifyOnOPOnlyDisallowedReplyOptionChoices = [
         value: NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment,
     },
 ];
+
+export enum NotifyOnDisallowedFlairReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 const NotifyOnDisallowedFlairReplyOptionChoices = [
     {
@@ -315,6 +246,12 @@ const NotifyOnDisallowedFlairReplyOptionChoices = [
     },
 ];
 
+export enum NotifyOnUnflairedPostReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
 const NotifyOnUnflairedPostReplyOptionChoices = [
     {
         label: "No Notification",
@@ -330,17 +267,11 @@ const NotifyOnUnflairedPostReplyOptionChoices = [
     },
 ];
 
-const NotifyOnSelfAwardReplyOptionChoices = [
-    { label: "No Notification", value: NotifyOnSelfAwardReplyOptions.NoReply },
-    {
-        label: "Send user a private message",
-        value: NotifyOnSelfAwardReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnSelfAwardReplyOptions.ReplyAsComment,
-    },
-];
+export enum NotifyOnSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 const NotifyOnSuccessReplyOptionChoices = [
     { label: "No Notification", value: NotifyOnSuccessReplyOptions.NoReply },
@@ -353,6 +284,120 @@ const NotifyOnSuccessReplyOptionChoices = [
         value: NotifyOnSuccessReplyOptions.ReplyAsComment,
     },
 ];
+
+export enum NotifyOnSelfAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+const NotifyOnSelfAwardReplyOptionChoices = [
+    { label: "No Notification", value: NotifyOnSelfAwardReplyOptions.NoReply },
+    {
+        label: "Send user a private message",
+        value: NotifyOnSelfAwardReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnSelfAwardReplyOptions.ReplyAsComment,
+    },
+];
+
+export enum NotifyOnBlockedUserReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+export const NotifyOnBlockedUserReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnBlockedUserReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnBlockedUserReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnBlockedUserReplyOptions.ReplyAsComment,
+    },
+];
+
+export enum NotifyUsersWhoCannotAwardPointsReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+const NotifyUsersWhoCannotAwardPointsReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyAsComment,
+    },
+];
+
+export enum NotifyOnBotAwardReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+const NotifyOnBotAwardReplyOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnBotAwardReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnBotAwardReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnBotAwardReplyOptions.ReplyAsComment,
+    },
+];
+
+export enum LeaderboardMode {
+    SubredditPermissions = "subredditpermissions",
+    ModOnly = "modonly",
+    ApprovedContributorsOnly = "approvedcontributorsonly",
+    Off = "off",
+    CurrentWikiSettings = "currentwikisettings",
+}
+
+const LeaderboardModeOptionChoices = [
+    { label: "Off", value: LeaderboardMode.Off },
+    {
+        label: "Current Wiki Settings",
+        value: LeaderboardMode.CurrentWikiSettings,
+    },
+    { label: "Mod Only", value: LeaderboardMode.ModOnly },
+    {
+        label: "Approved Contributors Only",
+        value: LeaderboardMode.ApprovedContributorsOnly,
+    },
+    {
+        label: "Default settings for wiki",
+        value: LeaderboardMode.SubredditPermissions,
+    },
+];
+
+export enum AccessControlOptions {
+    ModsOnly = "moderators-only",
+    ModsAndSuperusers = "moderators-and-superusers",
+    ModsSuperusersAndPostAuthor = "moderators-superusers-and-op",
+    ModsAndPostAuthor = "moderators-and-op",
+    Everyone = "everyone",
+}
 
 const AccessControlOptionChoices = [
     {
@@ -377,22 +422,11 @@ const AccessControlOptionChoices = [
     },
 ];
 
-const LeaderboardModeOptionChoices = [
-    { label: "Off", value: LeaderboardMode.Off },
-    {
-        label: "Current Wiki Settings",
-        value: LeaderboardMode.CurrentWikiSettings,
-    },
-    { label: "Mod Only", value: LeaderboardMode.ModOnly },
-    {
-        label: "Approved Contributors Only",
-        value: LeaderboardMode.ApprovedContributorsOnly,
-    },
-    {
-        label: "Default settings for wiki",
-        value: LeaderboardMode.SubredditPermissions,
-    },
-];
+export enum NotifyOnPointAlreadyAwardedToUserReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 const NotifyOnPointAlreadyAwardedToUserOptionChoices = [
     {
@@ -409,20 +443,11 @@ const NotifyOnPointAlreadyAwardedToUserOptionChoices = [
     },
 ];
 
-const NotifyOnTrustedUserAwardSuccessOptionChoices = [
-    {
-        label: "No Notification",
-        value: NotifyOnTrustedUserAwardSuccessReplyOptions.NoReply,
-    },
-    {
-        label: "Send user a private message",
-        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyAsComment,
-    },
-];
+export enum NotifyOnModAwardSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
 
 const NotifyOnModAwardSuccessOptionChoices = [
     {
@@ -439,6 +464,33 @@ const NotifyOnModAwardSuccessOptionChoices = [
     },
 ];
 
+export enum NotifyOnTrustedUserAwardSuccessReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
+const NotifyOnTrustedUserAwardSuccessOptionChoices = [
+    {
+        label: "No Notification",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.NoReply,
+    },
+    {
+        label: "Send user a private message",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyByPM,
+    },
+    {
+        label: "Reply as comment",
+        value: NotifyOnTrustedUserAwardSuccessReplyOptions.ReplyAsComment,
+    },
+];
+
+export enum NotifyOnModAwardFailReplyOptions {
+    NoReply = "none",
+    ReplyByPM = "replybypm",
+    ReplyAsComment = "replybycomment",
+}
+
 const NotifyOnModAwardFailOptionChoices = [
     {
         label: "No Notification",
@@ -454,24 +506,31 @@ const NotifyOnModAwardFailOptionChoices = [
     },
 ];
 
-const NotifyOnAutoSuperuserReplyOptionChoices = [
-    { label: "No Notification", value: AutoSuperuserReplyOptions.NoReply },
+export enum ExistingFlairOverwriteHandling {
+    OverwriteNumericSymbol = "overwritenumericsymbol",
+    OverwriteNumeric = "overwritenumeric",
+    NeverSet = "neverset",
+}
+
+const ExistingFlairHandlingOptionChoices = [
     {
-        label: "Send user a private message",
-        value: AutoSuperuserReplyOptions.ReplyByPM,
+        label: "Set flair to new score, if flair unset or flair is numeric (With Symbol)",
+        value: ExistingFlairOverwriteHandling.OverwriteNumericSymbol,
     },
     {
-        label: "Reply as comment",
-        value: AutoSuperuserReplyOptions.ReplyAsComment,
+        label: "Set flair to new score, if flair unset or flair is numeric (Without Symbol)",
+        value: ExistingFlairOverwriteHandling.OverwriteNumeric,
+    },
+    {
+        label: "Never set flair",
+        value: ExistingFlairOverwriteHandling.NeverSet,
     },
 ];
 
 export const appSettings: SettingsFormField[] = [
-    // === POINT SYSTEM ===
     {
         type: "group",
-        label: "General Settings",
-        helpText: "",
+        label: "Point System Settings",
         fields: [
             {
                 type: "select",
@@ -479,73 +538,245 @@ export const appSettings: SettingsFormField[] = [
                 label: "Who can award points?",
                 helpText: "Choose who is allowed to award points",
                 options: AccessControlOptionChoices,
-                defaultValue: [AccessControlOptions.ModsAndSuperusers],
+                defaultValue: [
+                    AccessControlOptions.ModsAndSuperusers,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
-                type: "paragraph",
-                name: AppSetting.PointTriggerWords,
-                label: "Trigger Words",
-                helpText:
-                    "List of trigger words users can type to award points (e.g., !award, .point). Each command should be on a new line.",
-                defaultValue: "!award\n.award",
-                onValidate: validateTriggerWords,
+            type: "boolean",
+            name: AppSetting.AllowUsersToReceivePointsOnPostSubmit,
+            label: "Allow users to receive points on post submit?",
+            defaultValue: false,
+            helpText:
+                "If enabled, users will receive points when they submit a post. If disabled, users will not receive points for submitting posts.",
             },
             {
-                type: "string",
-                name: AppSetting.PointName,
-                label: "VIP Point Name",
-                helpText:
-                    "What you want the VIP point to be called. It is recmommended to keep this lowercase",
-                defaultValue: "trophy",
-                onValidate: stringOrParagraphFieldContainsText,
-            },
-            {
-                type: "string",
-                name: AppSetting.PointSymbol,
-                label: "Point Symbol",
-                helpText: "Optional emoji or character to show alongside point totals. Leave empty for no symbol",
+                type: "boolean",
+                name: AppSetting.AllowUsersToReceivePointsOnCommentSubmit,
+                label: "Allow users to receive points on comment submit?",
+                defaultValue: false,
+                helpText: "If enabled, users will receive points when they submit a comment. If disabled, users will not receive points for submitting comments.",
             },
             {
                 type: "string",
                 name: AppSetting.FlairFormatting,
                 label: "Flair Formatting (All placeholders allow single or double curly braces)",
                 helpText:
-                    "The format for displaying flair information. Placeholders Supported: total, symbol, place",
+                    "How the flair should be formatted. Placeholders Supported: place, total, symbol",
                 defaultValue: TemplateDefaults.FlairFormatting,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.PointTriggerWords,
+                label: "VIP Trigger Words",
+                helpText:
+                    "List of trigger words users can type to award VIP points (e.g., !vip, .vip). Each command should be on a new line.",
+                defaultValue: "!vip\n.vip",
+                onValidate: validateTriggerWords,
+            },
+            {
+                type: "boolean",
+                name: AppSetting.AllowUnflairedPosts,
+                label: "Allow awarding points on unflaired posts?",
+                defaultValue: true,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnUnflairedPost,
+                label: "Notify users when they try to award points on a post without flair if it's not allowed",
+                options: NotifyOnUnflairedPostReplyOptionChoices,
+                defaultValue: [NotifyOnUnflairedPostReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.UnflairedPostMessage,
+                label: "Unflaired post message (All placeholders allow single or double curly braces)",
+                helpText:
+                    "Message shown when a user tries to award points on a post without flair. Placeholders Supported: name",
+                defaultValue: TemplateDefaults.UnflairedPostMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.NotifyOnPointAlreadyAwardedToUser,
+                type: "select",
+                label: "Notify on point already awarded to user",
+                helpText:
+                    "How to notify the user when they try to use the normal command on a user who has already received a point for that comment",
+                options: NotifyOnPointAlreadyAwardedToUserOptionChoices,
+                defaultValue: [NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.PointAlreadyAwardedToUserMessage,
+                type: "paragraph",
+                label: "Message to send users when they use the Normal Award Command, but the comment author has already received a point for the comment (All placeholders allow single or double curly braces)",
+                helpText: "Placeholders Supported: awarder, awardee, name",
+                defaultValue: TemplateDefaults.PointAlreadyAwardedToUserMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.NotifyOnPostAuthorAward,
+                type: "select",
+                label: "Notify on post author award",
+                helpText:
+                    "How to notify the user when they try to award a point to the Post Author (OP)",
+                options: NotifyOnPostAuthorAwardReplyOptionChoices,
+                defaultValue: [NotifyOnPostAuthorAwardReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.PostAuthorAwardMessage,
+                type: "paragraph",
+                label: "Message to send when someone tries to award the Post Author (OP)",
+                defaultValue: TemplateDefaults.PostAuthorAwardMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "string",
+                name: AppSetting.PointName,
+                label: "Point Name",
+                helpText:
+                    "Singular form of the name shown in award messages, like 'point', 'kudo', etc. Lowercase is recommended",
+                defaultValue: "point",
+            },
+            {
+                type: "string",
+                name: AppSetting.PointSymbol,
+                label: "Point Symbol",
+                helpText:
+                    "Optional emoji or character to show alongside point totals. Leave empty for no symbol",
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnModOnlyDisallowed,
+                label: "Notify users when only moderators can award points",
+                options: NotifyOnModOnlyDisallowedReplyOptionChoices,
+                defaultValue: [NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.ModOnlyDisallowedMessage,
+                label: "Mod Only Disallowed Message",
+                helpText:
+                    "Message shown when a user tries to award a point but only moderators can award points",
+                defaultValue: TemplateDefaults.ModOnlyDisallowedMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnModsAndPostAuthorDisallowed,
+                label: "Notify users when only moderators and the Post Author (OP) can award points",
+                options: NotifyOnModAndPostAuthorDisallowedReplyOptionChoices,
+                defaultValue: [
+                    NotifyOnModAndPostAuthorDisallowedReplyOptions.NoReply,
+                ],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.ModsAndPostAuthorDisallowedMessage,
+                label: "Mods and Post Author Disallowed Message",
+                helpText:
+                    "Message shown when a user tries to award a point but only moderators and the Post Author (OP) can award points",
+                defaultValue:
+                    TemplateDefaults.ModsAndPostAuthorDisallowedMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnApprovedOnlyDisallowed,
+                label: "Notify users when only moderators and approved users can award points",
+                options: NotifyOnApprovedOnlyDisallowedReplyOptionChoices,
+                defaultValue: [
+                    NotifyOnApprovedOnlyDisallowedReplyOptions.NoReply,
+                ],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.ApprovedOnlyDisallowedMessage,
+                label: "Approved Only Disallowed Message",
+                helpText:
+                    "Message shown when a user tries to award a point but only mods and approved users can award points",
+                defaultValue: TemplateDefaults.ApprovedOnlyDisallowedMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnOPOnlyDisallowed,
+                label: "Notify Users When Only OP, Approved Users, And Moderators Can Award Points",
+                options: NotifyOnOPOnlyDisallowedReplyOptionChoices,
+                defaultValue: [NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.OPOnlyDisallowedMessage,
+                label: "OP Only Disallowed Message",
+                helpText:
+                    "Message shown when a user tries to award a point but only mods, approved users, and Post Authors (OPs) can award points",
+                defaultValue: TemplateDefaults.OPOnlyDisallowedMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnDisallowedFlair,
+                label: "Notify users when they try to award points on a post with a disallowed flair",
+                options: NotifyOnDisallowedFlairReplyOptionChoices,
+                defaultValue: [NotifyOnDisallowedFlairReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.DisallowedFlairs,
+                label: "Disallowed Flairs",
+                helpText:
+                    "Flairs where points cannot be awarded. Each flair should be on a new line",
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.DisallowedFlairMessage,
+                label: "Disallowed Flair Message",
+                helpText:
+                    "Message shown when a user tries to award points on a post with a disallowed flair",
+                defaultValue: TemplateDefaults.DisallowedFlairMessage,
                 onValidate: stringOrParagraphFieldContainsText,
             },
         ],
     },
     {
         type: "group",
-        label: "User Settings",
-        helpText: "User specific settings",
+        label: "Points Setting Options",
         fields: [
             {
+                name: AppSetting.ExistingFlairHandling,
                 type: "select",
-                name: AppSetting.NotifyOnNormalAwardFail,
-                label: "Notify users when they are not allowed to award VIP points",
-                helpText: "",
-                options: NotifyOnBlockedUserReplyOptionChoices,
-                defaultValue: [NotifyOnBlockedUserReplyOptions.ReplyByPM],
+                label: "Flair setting option",
+                helpText:
+                    "If using a symbol, it must be set in the Point Symbol box",
+                options: ExistingFlairHandlingOptionChoices,
+                multiSelect: false,
+                defaultValue: [ExistingFlairOverwriteHandling.OverwriteNumeric],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
-                type: "paragraph",
-                name: AppSetting.UsersWhoCannotAwardPoints,
-                label: "Users Who Cannot Award Points",
+                name: AppSetting.CSSClass,
+                type: "string",
+                label: "CSS class to use for points flairs",
                 helpText:
-                    "A list of users who aren't allowed to award VIP points, each username should be on a new line (no 'u/')",
+                    "Optional. Please choose either a CSS class or flair template, not both",
             },
             {
-                type: "paragraph",
-                name: AppSetting.UsersWhoCannotAwardPointsMessage,
-                label: "Users Who Cannot Be Awarded Points Message (All placeholders allow single or double curly braces)",
+                name: AppSetting.FlairTemplate,
+                type: "string",
+                label: "Flair template ID to use for points flairs",
                 helpText:
-                    "Message to send users if they aren't allowed to award VIP Points. Placeholders Supported: modmailLink",
-                defaultValue: TemplateDefaults.UsersWhoCannotAwardPointsMessage,
-                onValidate: stringOrParagraphFieldContainsText,
+                    "Optional. Please choose either a CSS class or flair template, not both",
+                onValidate: isFlairTemplateValid,
             },
         ],
     },
@@ -565,7 +796,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Trusted User/Mod award command",
                 helpText:
                     "Optional. Alternate command for mods and trusted users to award reputation points",
-                defaultValue: "!modaward",
+                defaultValue: "!modvip",
                 onValidate: validateModTriggerCommand,
             },
             {
@@ -574,7 +805,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify users who reach the auto trusted user threshold",
                 options: NotifyOnAutoSuperuserReplyOptionChoices,
                 multiSelect: false,
-                defaultValue: [AutoSuperuserReplyOptions.NoReply],
+                defaultValue: [AutoSuperuserReplyOptions.ReplyAsComment],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -618,7 +849,7 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify users when a moderator or trusted user awards a point",
                 options: NotifyOnModAwardSuccessOptionChoices,
-                defaultValue: [NotifyOnModAwardSuccessReplyOptions.NoReply],
+                defaultValue: [NotifyOnModAwardSuccessReplyOptions.ReplyAsComment],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -633,12 +864,13 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnModAwardFail,
                 type: "select",
                 label: "Notify on mod award fail",
-                helpText: "",
+                helpText: `Applicable to both "Mod Award Fail Message" and "Message to send user when the "Trusted User/Mod award command" has already been used on the comment."`,
                 options: NotifyOnModAwardFailOptionChoices,
+                defaultValue: [NotifyOnModAwardFailReplyOptions.ReplyAsComment],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
-                name: AppSetting.ModAwardCommandFail,
+                name: AppSetting.ModAwardCommandFailMessage,
                 type: "paragraph",
                 label: "Mod Award Fail Message (All placeholders allow single or double curly braces)",
                 helpText: `Optional. Message to send users when they aren't allowed to use the "Trusted User/Mod award command". Placeholders Supported: command, name, awarder, awardee`,
@@ -646,7 +878,7 @@ export const appSettings: SettingsFormField[] = [
                 onValidate: stringOrParagraphFieldContainsText,
             },
             {
-                name: AppSetting.ModAwardAlreadyGiven,
+                name: AppSetting.ModAwardAlreadyGivenMessage,
                 type: "paragraph",
                 label: `Message to send user when the "Trusted User/Mod award command" has already been used on the comment (All placeholders allow single or double curly braces)`,
                 helpText:
@@ -658,18 +890,205 @@ export const appSettings: SettingsFormField[] = [
     },
     {
         type: "group",
-        label: "Misc Settings",
-        helpText: "Settings that don't fall under any other category",
+        label: "Notification Settings",
         fields: [
             {
-                type: "number",
-                name: AppSetting.LeaderboardSize,
-                label: "Wiki Leaderboard Size",
-                helpText: `How many people to display on the "Leaderboard Wiki Page". Set to 0 to disable`,
-                defaultValue: 50,
-                onValidate: numberFieldHasValidOption,
+                type: "select",
+                name: AppSetting.NotifyOnSelfAward,
+                label: "Notify users when they try to award themselves",
+                options: NotifyOnSelfAwardReplyOptionChoices,
+                defaultValue: [NotifyOnSelfAwardReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.SelfAwardMessage,
+                label: "Self Award Message (All placeholders allow single or double curly braces)",
+                helpText:
+                    "Shown when someone tries to award themselves. Placeholders Supported: name, awarder",
+                defaultValue: TemplateDefaults.SelfAwardTemplate,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnSuccess,
+                label: "Notify users when a point is awarded successfully",
+                options: NotifyOnSuccessReplyOptionChoices,
+                defaultValue: [NotifyOnSuccessReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.SuccessMessage,
+                label: "Normal Award Success Message (All placeholders allow single or double curly braces)",
+                helpText:
+                    "Message when a point is awarded. Placeholders Supported: awardeePage, awarderPage, awardee, awarder, symbol, total, name, leaderboard",
+                defaultValue:
+                    TemplateDefaults.NotifyOnNormalAwardSuccessTemplate,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyUsersWhoCannotAwardPoints,
+                label: "Notify a user if they are not allowed to award points",
+                options: NotifyUsersWhoCannotAwardPointsReplyOptionChoices,
+                defaultValue: [
+                    NotifyUsersWhoCannotAwardPointsReplyOptions.NoReply,
+                ],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.UsersWhoCannotAwardPoints,
+                label: "Users Who Cannot Award Points",
+                helpText:
+                    "List of usernames who cannot award points, even if they are mods or approved users. Each username should be on a new line",
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnBlockedUser,
+                label: "How to notify users when they are blocked from awarding points",
+                options: NotifyOnBlockedUserReplyOptionChoices,
+                defaultValue: [NotifyOnBlockedUserReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.UsersWhoCannotAwardPointsMessage,
+                label: "User Cannot Award Points Message (All placeholders allow single or double curly braces)",
+                helpText: `Message shown when a user specified in the "Users Who Cannot Award Points" setting tries to award points but is not allowed to. Placeholders Supported: name`,
+                defaultValue: TemplateDefaults.UsersWhoCannotAwardPointsMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "select",
+                name: AppSetting.NotifyOnBotAward,
+                label: "Notify a user if they try to award the bot",
+                options: NotifyOnBotAwardReplyOptionChoices,
+                defaultValue: [NotifyOnBotAwardReplyOptions.ReplyAsComment],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.BotAwardMessage,
+                label: "Bot Award Message (All placeholders allow single or double curly braces)",
+                helpText:
+                    "Message shown when someone tries to award the bot. Placeholders Supported: name, awardee",
+                defaultValue: TemplateDefaults.BotAwardMessage,
+                onValidate: stringOrParagraphFieldContainsText,
             },
         ],
+    },
+    {
+        type: "group",
+        label: "Misc Settings",
+        fields: [
+            {
+                name: AppSetting.LeaderboardMode,
+                type: "select",
+                label: "Wiki Leaderboard Mode",
+                options: LeaderboardModeOptionChoices,
+                multiSelect: false,
+                defaultValue: [LeaderboardMode.CurrentWikiSettings],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.LeaderboardSize,
+                type: "number",
+                label: "Leaderboard Size",
+                helpText:
+                    "Number of users to show on the leaderboard (1-10,000)",
+                defaultValue: 50,
+                onValidate: ({ value }) => {
+                    if (value === undefined || value === null || isNaN(value)) {
+                        return "You must enter a number";
+                    }
+
+                    if (value !== undefined && (value < 1 || value > 10_000)) {
+                        return "Value should be between 1 and 10,000";
+                    }
+                },
+            },
+            {
+                //DiscordServerLink
+                name: AppSetting.DiscordServerLink,
+                type: "string",
+                label: "Discord Server Link",
+                helpText:
+                    "Optional. Link to your subreddit's discord server. A non-expiring link is recommended.",
+            },
+            {
+                name: AppSetting.LeaderboardName,
+                type: "string",
+                label: "Leaderboard Wiki Name",
+                helpText:
+                    "Name of the wiki page for your subreddit's leaderboard (e.g. leaderboard). Singular form is recommended as there is only one leaderboard per subreddit",
+                defaultValue: "leaderboard",
+                onValidate: ({ value }) => {
+                    if (!value || value.trim() === "") {
+                        return "You must specify a wiki page name";
+                    }
+                },
+            },
+            {
+                name: AppSetting.PointSystemHelpPage,
+                type: "string",
+                label: "Point System Help Page",
+                helpText:
+                    "Optional. Name of the wiki page for explaining your subreddit's point system (e.g. pointsystem).",
+            },
+        ],
+    },
+    {
+        type: "group",
+        label: "Summary Message Settings",
+        fields: [
+            {
+                type: "boolean",
+                label: "Create a new Modmail conversation for each summary",
+                name: AppSetting.DigestNewMessageEachDay,
+                helpText:
+                    "If enabled, a new modmail conversation will be created for each summary message. If disabled, the bot will reply to the previous summary message when sending a new summary.",
+                defaultValue: true,
+            },
+            {
+                type: "select",
+                label: "Frequency of summary messages",
+                name: AppSetting.DigestFrequency,
+                helpText:
+                    "Choose how often you would like to receive the summary messages",
+                options: [
+                    { label: "Daily", value: "Daily" },
+                    { label: "Weekly", value: "Weekly" },
+                ],
+                multiSelect: false,
+                defaultValue: ["Weekly"],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                type: "boolean",
+                label: "Send summary to the 'Mod Notifications' section of modmail",
+                helpText:
+                    "If set, the daily digest will be sent to the 'Mod Notifications' section of modmail, otherwise it will go into the main inbox.",
+                name: AppSetting.DigestAsModNotification,
+                defaultValue: false,
+            },
+        ],
+    },
+    {
+        type: "group",
+        label: "Upgrade Notification Settings",
+        fields: [
+            {
+                type: "boolean",
+                label: "Upgrade notifications",
+                name: AppSetting.UpgradeNotifier,
+                helpText:
+                    "Receive a message when a new version of RepBot is released",
+                defaultValue: true,
+            },
+        ],
+        // },
     },
 ];
 
