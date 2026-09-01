@@ -278,12 +278,19 @@ Flair functionality can be disabled if the subreddit does not want VIPBot to mod
 Moderators have access to administrative commands for managing the system.
 
 Available moderator commands include:
+
 `!vipadd u/username`: Grant VIP status to a user.
+
 `!vipadd u/username 30`: Grant VIP status for a specified number of days.
+
 `!vipremove u/username`: Remove VIP status.
+
 `!addxp u/username amount`: Add or remove XP.
+
 `!addcoins u/username amount`: Add or remove coins.
+
 `!addrep u/username amount`: Add or remove reputation.
+
 `!setlevel u/username level`: Set a user's level.
 
 Moderator actions can also be recorded in the VIPBot audit system.
@@ -608,12 +615,14 @@ VIPBot is an open-source Reddit application designed for use with Reddit's Devvi
 VIPBot combines: **XP, Levels, Coins, Reputation, Achievements, Streaks, and Leaderboards** into a single community-recognition system.
 
 This app is open source and licensed under the BSD 3-Clause License. You can find the source code on GitHub [here](https://github.com/the-gdmo/vipbot).
+
 ---
 
 ## Version History
 ### 1.0.0
 * Bring the bot into an up-and-running state
 * List all placeholders in the README
+* Update README to list all features that exist currently
 ### 0.0.2
 * Simplify README as much as possible
 * Change messaging logic to link to my developer instead of a separate subreddit
