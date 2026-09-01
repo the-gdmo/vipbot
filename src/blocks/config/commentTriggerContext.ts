@@ -57,7 +57,7 @@ export async function getUserIsSuperuser(
     }
 
     const autoSuperuserThreshold =
-        (settings[AppSetting.AutoSuperuserThreshold] as number | undefined) ??
+        (settings[AppSetting.AutoSuperuserThreshold] as number) ??
         0;
 
     if (autoSuperuserThreshold) {

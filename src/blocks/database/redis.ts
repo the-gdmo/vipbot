@@ -3,8 +3,6 @@ import { Comment, TriggerContext, User } from "@devvit/public-api";
 import { getTriggers } from "../utils/common-utils";
 import { logger } from "../utils/logger";
 
-export const POINTS_STORE_KEY = `thanksPointsStore`;
-
 //------------------------
 // LastValidPostTitle
 //------------------------

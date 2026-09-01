@@ -27,16 +27,20 @@ Users progress through multiple levels as they accumulate XP.
 
 The default levels are:
 
-| Level | Title     | XP Required |
-| ----: | --------- | ----------: |
-|     1 | Newcomer  |           0 |
-|     2 | Supporter |         100 |
-|     3 | Bronze    |         500 |
-|     4 | Silver    |       1,500 |
-|     5 | Gold      |       5,000 |
-|     6 | Diamond   |      15,000 |
-|     7 | Elite     |      50,000 |
-|     8 | Legendary |     100,000 |
+| Level | Title                 |XP Required|
+| ----: | ---------             |----------:|
+|     1 | Newcomer              |         0 |
+|     2 | Supporter             |       100 |
+|     3 | Bronze                |       500 |
+|     4 | Silver                |     1,500 |
+|     5 | Gold                  |     5,000 |
+|     6 | Diamond               |    15,000 |
+|     7 | Elite                 |    50,000 |
+|     8 | Platinum              |   100,000 |
+|     9 | Champion              |   200,000 |
+|    10 | Legend                |   300,000 |
+|    11 | Mythic                |   500,000 |
+|    12 | A League Of Their Own | 1,000,000 |
 
 Level requirements and rewards can be expanded in [VIPBot's settings](https://developers.reddit.com/apps/vipbot2).
 
@@ -389,19 +393,21 @@ The command prefix can be changed through the app settings.
 
 VIPBot supports placeholders in configurable messages and templates.
 
-Placeholders can use either single or double curly braces (ie `{username}` or `{{username}}`)
+Placeholders can use either single or double curly braces (ie `{username}` or `{{username}}`).
+
+NOTE: All placeholders are case-insensitive.
 
 ### User Information
 
 * `username`: The user's Reddit username without `u/`.
 * `author`: The username of the author of a post or comment.
 * `subreddit`: The subreddit name without `r/`.
-* `level`: The user's current level.
-* `levelName`: The name of the user's current level.
+* `level`: The user's current number level.
+* `rank`: The name of the user's current level.
 * `xp`: The user's current XP.
 * `coins`: The user's current coin balance.
 * `reputation`: The user's current reputation.
-* `rank`: The user's leaderboard position.
+* `place`: The user's leaderboard position.
 * `streak`: The user's current activity streak.
 * `vip`: Whether the user currently has VIP status.
 

@@ -18,11 +18,6 @@ export function formatFlair(
         }
     }
 
-    const footer = `\n\n---\n\n^(I am a bot — contact the mods of the subreddit you received this in with any questions or [r/VIPBot2](https://www.reddit.com/message/compose?to=r/VIPBot2) to talk directly with my developer)`;
-    if (!result.trim().endsWith(footer)) {
-        result = result.trim() + footer;
-    }
-
     return result;
 }
 

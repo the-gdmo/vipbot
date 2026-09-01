@@ -1,4 +1,8 @@
 export const POINTS_STORE_KEY = "vipPointsStore";
+
+export async function USER_STORE_KEY(user: string): Promise<string>{
+    return `${POINTS_STORE_KEY}:${user}`;
+} 
 // Job Names
 export const UPDATE_LEADERBOARD_JOB = "updateLeaderboard";
 export const UPDATE_MODINFO_JOB = "updateModInfo";

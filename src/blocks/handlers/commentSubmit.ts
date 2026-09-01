@@ -33,7 +33,6 @@ import { logger } from "../utils/logger";
 import {
     flairToggleKeyExists,
     getModDupKey,
-    POINTS_STORE_KEY,
     setModDupKey,
 } from "../database/redis";
 import {
@@ -47,6 +46,7 @@ import {
     SafeWikiClient,
     updateUserWiki,
 } from "../jobs/leaderboard";
+import { POINTS_STORE_KEY } from "../config/constants";
 
 export async function commentContainsModCommand(
     event: CommentSubmit | CommentUpdate,
@@ -351,10 +351,9 @@ export async function awardPointToUserModCommand(
 
     if (!user) return;
 
-    const commentorsCanReceivePointsOnCommenting = settings[
-        AppSetting.AllowUsersToReceivePointsOnCommentSubmit
-    ] as boolean | undefined;
-    if (!commentorsCanReceivePointsOnCommenting) {
+    const commentorsCanReceivePointsOnCommenting =
+        (settings[AppSetting.CommentIncrement] as number) ?? 0;
+    if (commentorsCanReceivePointsOnCommenting === 0) {
         logger.info("❌ Commentors cannot receive points on commenting", {
             OP: user.username,
             postId: event.post.id,
@@ -362,20 +361,24 @@ export async function awardPointToUserModCommand(
         return;
     }
 
-    const awardersScore = await getCurrentScore(user, context);
+    const commentorsScore = await getCurrentScore(user, context);
 
-    if (!awardersScore) {
+    if (!commentorsScore) {
         logger.warn("❌ Could not retrieve awarder's score", {
             awarder: user.username,
         });
         return;
     }
 
-    const awarderScore: ScoreResult = {
-        score: awardersScore.score + 1,
+    const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
+
+    const commentorScore: ScoreResult = {
+        score: commentorsScore.score + increment,
+        userHasFlair: commentorsScore.userHasFlair,
+        flairIsNumber: commentorsScore.flairIsNumber,
     };
 
-    setUserScore(context, user.username, awarderScore, settings);
+    setUserScore(context, user.username, commentorScore, settings);
 
     const parentComment = await getParentComment(event, context);
     if (!parentComment || !parentComment.authorId) {
@@ -424,7 +427,7 @@ export async function awardPointToUserModCommand(
     await handleAutoSuperuserPromotion(
         event,
         context,
-        awarderScore.score,
+        commentorsScore.score,
         modCommand,
     );
 
@@ -1190,8 +1193,10 @@ async function awardPointToUserNormalCommand(
         return;
     }
 
+    const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
+
     const newScore: ScoreResult = {
-        score: existingScore.score + 1,
+        score: existingScore.score + increment,
         userHasFlair: existingScore.userHasFlair,
         flairIsNumber: existingScore.flairIsNumber,
     };
@@ -1603,17 +1608,19 @@ export async function onCommentSubmit(
     // ─────────────────────────────────────────────
     // Initialize context
     // ─────────────────────────────────────────────
+
     const commentTriggerContext = new CommentTriggerContext();
     await commentTriggerContext.init(event, context);
+
     const settings = await context.settings.getAll();
     const awarder = event.author.name;
     const commentBody = event.comment.body.toLowerCase();
     const triggers = await getTriggers(context);
     const triggerUsed = triggers.find((t) => commentBody.includes(t));
-    const parentComment: Comment | undefined = await getParentComment(
-        event,
-        context,
-    );
+
+    // ─────────────────────────────────────────────
+    // Get commenter
+    // ─────────────────────────────────────────────
 
     let user: User | undefined;
 
@@ -1623,38 +1630,88 @@ export async function onCommentSubmit(
         user = undefined;
     }
 
-    if (!user) return;
+    if (!user) {
+        logger.warn("❌ Could not fetch user object for commenter", {
+            awarder,
+        });
+        return;
+    }
 
-    const commentorsCanReceivePointsOnCommenting = settings[
-        AppSetting.AllowUsersToReceivePointsOnCommentSubmit
-    ] as boolean | undefined;
-    if (!commentorsCanReceivePointsOnCommenting) {
+    // ─────────────────────────────────────────────
+    // Comment point logic
+    //
+    // This happens regardless of whether the comment
+    // is an award comment.
+    // ─────────────────────────────────────────────
+
+    const commentorsCanReceivePointsOnCommenting =
+        (settings[AppSetting.CommentIncrement] as number) ?? 0;
+
+    if (commentorsCanReceivePointsOnCommenting !== 0) {
+        const commentorScore = await getCurrentScore(user, context);
+
+        if (!commentorScore) {
+            logger.warn("❌ Could not retrieve commentor's score", {
+                awarder: user.username,
+            });
+        } else {
+            const increment = commentorsCanReceivePointsOnCommenting;
+
+            const commentorsScore: ScoreResult = {
+                score: commentorScore.score + increment,
+                userHasFlair: commentorScore.userHasFlair,
+                flairIsNumber: commentorScore.flairIsNumber,
+            };
+
+            await setUserScore(
+                context,
+                user.username,
+                commentorsScore,
+                settings,
+            );
+
+            const currentScore = await getCurrentScore(user, context);
+            if (!currentScore) {
+                logger.error(`No score found`, { user });
+                return;
+            }
+            setUserScore(context, user.username, commentorsScore, settings);
+            logger.info("✅ Comment points awarded", {
+                username: user.username,
+                previousScore: commentorScore.score,
+                currentScore: currentScore.score,
+                increment,
+                newScore: commentorsScore.score,
+            });
+        }
+    } else {
         logger.info("❌ Commentors cannot receive points on commenting", {
             OP: user.username,
             postId: event.post.id,
         });
-        return;
-    } else {
-        logger.info("✅ Commentors can receive points on commenting", {
-            OP: user.username,
-            postId: event.post.id,
-        });
     }
 
-    const awardersScore = await getCurrentScore(user, context);
+    // ─────────────────────────────────────────────
+    // If this isn't an award comment, we're done.
+    //
+    // The commenter has already received their
+    // CommentIncrement above.
+    // ─────────────────────────────────────────────
 
-    if (!awardersScore) {
-        logger.warn("❌ Could not retrieve awarder's score", {
-            awarder: user.username,
-        });
+    if (!triggerUsed) {
+        logger.debug("❌ No valid award command found.");
         return;
     }
 
-    const awarderScore: ScoreResult = {
-        score: awardersScore.score + 1,
-    };
+    // ─────────────────────────────────────────────
+    // Get parent comment
+    // ─────────────────────────────────────────────
 
-    setUserScore(context, user.username, awarderScore, settings);
+    const parentComment: Comment | undefined = await getParentComment(
+        event,
+        context,
+    );
+
     if (!parentComment) {
         logger.warn("❌ Parent comment not found", {
             commentId: event.comment.id,
@@ -1662,35 +1719,47 @@ export async function onCommentSubmit(
         return;
     }
 
-    if (!triggerUsed) {
-        logger.debug("❌ No valid award command found.");
-        return;
-    }
+    // ─────────────────────────────────────────────
+    // Ignored context
+    // ─────────────────────────────────────────────
 
     const ignoredType = getIgnoredContextType(event.comment.body, triggerUsed);
 
-    const IgnoredContextNeedsHandling = await ignoredContextNeedsHandling(
+    const ignoredContextNeedsHandlingObj = await ignoredContextNeedsHandling(
         event,
         context,
         triggerUsed,
     );
+
     if (ignoredType) {
-        logger.info(`ignoredType exists in comment`, { ignoredType });
-        if (IgnoredContextNeedsHandling) {
-            logger.info(`Running handleIgnoredContext()`, {
-                IgnoredContextNeedsHandling,
+        logger.info("ignoredType exists in comment", {
+            ignoredType,
+        });
+
+        if (ignoredContextNeedsHandlingObj) {
+            logger.info("Running handleIgnoredContext()", {
+                ignoredContextNeedsHandling,
             });
+
             await handleIgnoredContext(event, context, triggerUsed);
-            return;
-        } else {
-            logger.info(`Ignored context doesn't need handling`);
+
             return;
         }
+
+        logger.info("Ignored context doesn't need handling");
+        return;
     }
 
+    // ─────────────────────────────────────────────
+    // Get awardee
+    // ─────────────────────────────────────────────
+
     const awardee = parentComment.authorName;
+
     if (!awardee) {
-        logger.warn("❌ No recipient found", { parentComment });
+        logger.warn("❌ No recipient found", {
+            parentComment,
+        });
         return;
     }
 
@@ -1701,6 +1770,7 @@ export async function onCommentSubmit(
     } catch {
         recipient = undefined;
     }
+
     if (!recipient) {
         logger.warn("❌ Could not fetch user object for recipient", {
             recipient: awardee,
@@ -1708,36 +1778,17 @@ export async function onCommentSubmit(
         return;
     }
 
-    const existingScore = await getCurrentScore(recipient, context);
-    if (!existingScore) {
-        logger.warn("❌ Could not fetch existing score for recipient", {
-            recipient: awardee,
-        });
-        return;
-    }
+    // ─────────────────────────────────────────────
+    // Access control
+    // ─────────────────────────────────────────────
 
     const isMod = commentTriggerContext.isMod;
     const isSuperUser = commentTriggerContext.isSuperUser;
     const userCanAward = commentTriggerContext.userCanAward;
 
-    // ─────────────────────────────────────────────
-    // Access control enforcement
-    // ─────────────────────────────────────────────
-    let awarderObj: User | undefined;
-
-    try {
-        awarderObj = await context.reddit.getUserByUsername(awarder);
-    } catch {
-        awarderObj = undefined;
-    }
-    if (!awarderObj) {
-        logger.warn("❌ Could not fetch user object for awarder", { awarder });
-        return;
-    }
-
     const hasPermission = await userHasPermission(
         event,
-        awarderObj.id,
+        user.id,
         commentTriggerContext,
         context,
         settings,
@@ -1753,10 +1804,11 @@ export async function onCommentSubmit(
     }
 
     // ─────────────────────────────────────────────
-    // Detect which command type exists
+    // Detect command type
     // ─────────────────────────────────────────────
 
     const containsMod = await commentContainsModCommand(event, context);
+
     const containsUser = await commentContainsUserCommand(event, context);
 
     logger.debug("Checking values", {
@@ -1764,6 +1816,10 @@ export async function onCommentSubmit(
         containsMod,
         containsUser,
     });
+
+    // ─────────────────────────────────────────────
+    // Validation logic
+    // ─────────────────────────────────────────────
 
     await unflairedPostLogic(event, context, awarder, settings);
 
@@ -1786,86 +1842,102 @@ export async function onCommentSubmit(
 
     if (containsUser && !containsMod) {
         if (!userCanAward) {
-            logger.debug("❌ User blocked from awarding points", { awarder });
+            logger.debug("❌ User blocked from awarding points", {
+                awarder,
+            });
             return;
         }
+
         const handled = await executeUserCommand(event, context);
-        // Trigger leaderboard update
+
         if (handled) {
-            await context.scheduler.runJob({
-                name: "updateLeaderboard",
-                runAt: new Date(),
-                data: {
-                    reason: `Updated score for ${user.username}. Triggered by user command.`,
-                },
+            logger.info("✅ User command executed successfully", {
+                awarder,
+                awardee,
             });
-            logger.info("✅ User command executed successfully");
-            return;
         } else {
             logger.debug("❌ User command detected but not handled");
         }
+
         return;
     }
 
     // ─────────────────────────────────────────────
     // Mod command logic
     // ─────────────────────────────────────────────
+
     if (containsMod && !containsUser) {
         if (isMod || isSuperUser) {
             const handled = await executeModCommand(event, context);
-            // Trigger leaderboard update
+
             if (handled) {
-                await context.scheduler.runJob({
-                    name: "updateLeaderboard",
-                    runAt: new Date(),
-                    data: {
-                        reason: `Updated score for ${user.username}. Triggered by mod command.`,
-                    },
-                });
-                logger.info("✅ Mod command executed successfully");
-                return;
-            }
-        } else {
-            const command = await modCommandValue(context);
-            //send message saying no perms
-            // ModAwardCommandFailMessage
-            const modAwardFailMsg = formatMessage(
-                event,
-                (settings[AppSetting.ModAwardCommandFailMessage] as string) ??
-                    TemplateDefaults.ModAwardCommandFailMessage,
-                {
+                logger.info("✅ Mod command executed successfully", {
                     awarder,
                     awardee,
-                    command,
-                },
-            );
-
-            const notify = ((settings[
-                AppSetting.NotifyOnModAwardFail
-            ] as string[]) ?? ["none"])[0];
-
-            if (notify === NotifyOnModAwardFailReplyOptions.ReplyByPM) {
-                await context.reddit.sendPrivateMessage({
-                    to: awarder,
-                    text: modAwardFailMsg,
-                    subject: "Unsuccessful Award",
                 });
-            } else if (
-                notify === NotifyOnModAwardFailReplyOptions.ReplyAsComment
-            ) {
-                const modAwardFailComment = await context.reddit.submitComment({
-                    id: event.comment.id,
-                    text: modAwardFailMsg,
-                });
-
-                await modAwardFailComment.distinguish();
+            } else {
+                logger.debug("❌ Mod command detected but not handled");
             }
+
+            return;
         }
+
+        // ─────────────────────────────────────────
+        // Mod command attempted without permission
+        // ─────────────────────────────────────────
+
+        const command = await modCommandValue(context);
+
+        const modAwardFailMsg = formatMessage(
+            event,
+            (settings[AppSetting.ModAwardCommandFailMessage] as string) ??
+                TemplateDefaults.ModAwardCommandFailMessage,
+            {
+                awarder,
+                awardee,
+                command,
+            },
+        );
+
+        const notify = ((settings[
+            AppSetting.NotifyOnModAwardFail
+        ] as string[]) ?? ["none"])[0];
+
+        if (notify === NotifyOnModAwardFailReplyOptions.ReplyByPM) {
+            await context.reddit.sendPrivateMessage({
+                to: awarder,
+                text: modAwardFailMsg,
+                subject: "Unsuccessful Award",
+            });
+        } else if (notify === NotifyOnModAwardFailReplyOptions.ReplyAsComment) {
+            const modAwardFailComment = await context.reddit.submitComment({
+                id: event.comment.id,
+                text: modAwardFailMsg,
+            });
+
+            await modAwardFailComment.distinguish();
+        }
+
+        return;
+    }
+
+    // ─────────────────────────────────────────────
+    // Both commands detected
+    // ─────────────────────────────────────────────
+
+    if (containsMod && containsUser) {
+        logger.warn("⚠️ Both user and mod commands detected", {
+            awarder,
+            commentId: event.comment.id,
+        });
+
+        return;
     }
 
     // ─────────────────────────────────────────────
     // Fallback unexpected flow
     // ─────────────────────────────────────────────
+
     logger.error("Unexpected command flow detected", {
         containsMod,
         containsUser,

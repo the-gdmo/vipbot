@@ -31,8 +31,6 @@ export enum AppSetting {
     UserPointsInitializedMessage = "userPointsInitializedMessage",
     NotifyUsersWhenPointsAreInitialized = "notifyUsersWhenPointsAreInitialized",
     PointsAreInitializedMessage = "pointsAreInitializedMessage",
-    AllowUsersToReceivePointsOnPostSubmit = "allowUsersToReceivePointsOnPostSubmit",
-    AllowUsersToReceivePointsOnCommentSubmit = "allowUsersToReceivePointsOnCommentSubmit",
     AllowUnflairedPosts = "allowUnflairedPosts",
     NotifyOnUnflairedPost = "notifyOnUnflairedPost",
     UnflairedPostMessage = "unflairedPostMessage",
@@ -71,11 +69,16 @@ export enum AppSetting {
     CSSClass = "CSSClass",
     FlairTemplate = "flairTemplate",
     LevelThresholds = "levelThresholds",
+    PostIncrement = "postIncrement",
+    CommentIncrement = "commentIncrement",
 }
 
 export enum TemplateDefaults {
-    LevelThresholds = "1|0\n2|100\n3|500\n4|1500\n5|5000\n6|15000\n7|50000\n8|100000",
-    FlairFormatting = "LVL {level} | {total}{symbol}",
+    LevelThresholds = `1|0|Newcomer\n2|100|Supporter\n3|500|Bronze\n` +
+        `4|1500|Silver\n5|5000|Gold\n6|15000|Diamond\n` +
+        `7|50000|Elite\n8|100000|Platinum\n9|200000|Champion\n` +
+        `10|300000|Legend\n11|500000|Mythic\n12|1000000|A League Of Their Own`,
+    FlairFormatting = "LVL {level} | Rank {rank} | {total}{symbol}",
     UnflairedPostMessage = "Points cannot be awarded on posts without flair. Please award only on flaired posts.",
     OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
     LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
@@ -120,7 +123,6 @@ const NotifyOnAutoSuperuserReplyOptionChoices = [
         value: AutoSuperuserReplyOptions.ReplyAsComment,
     },
 ];
-
 
 export enum NotifyOnModOnlyDisallowedReplyOptions {
     NoReply = "none",
@@ -538,8 +540,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "paragraph",
                 name: AppSetting.LevelThresholds,
                 label: "Level Thresholds (All placeholders allow single or double curly braces)",
-                helpText:
-                    "Level thresholds for users to reach. Format: `<level>|<points>` (e.g., `2|100` means level 2 = 100 points). Each threshold should be on a new line",
+                helpText: `Level thresholds for users to reach. Format: "<level>|<points>|<rankName>" (e.g., "1|0|Newcomer" means level 1 requires 0 points and gives the title of "Newcomer"). Each threshold should be on a new line`,
                 defaultValue: TemplateDefaults.LevelThresholds,
                 onValidate: levelThresholdIsValid,
             },
@@ -549,32 +550,33 @@ export const appSettings: SettingsFormField[] = [
                 label: "Who can award points?",
                 helpText: "Choose who is allowed to award points",
                 options: AccessControlOptionChoices,
-                defaultValue: [
-                    AccessControlOptions.ModsAndVIPS,
-                ],
+                defaultValue: [AccessControlOptions.ModsAndVIPS],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
-            type: "boolean",
-            name: AppSetting.AllowUsersToReceivePointsOnPostSubmit,
-            label: "Allow users to receive points on post submit?",
-            defaultValue: false,
-            helpText:
-                "If enabled, users will receive points when they submit a post. If disabled, users will not receive points for submitting posts.",
+                type: "number",
+                name: AppSetting.PostIncrement,
+                label: "Increment User Score When Posting",
+                helpText:
+                    "How much to increment a user's score by when they make a new post. Set to 0 to disable",
+                defaultValue: 0,
+                onValidate: numberFieldHasValidOption,
             },
             {
-                type: "boolean",
-                name: AppSetting.AllowUsersToReceivePointsOnCommentSubmit,
-                label: "Allow users to receive points on comment submit?",
-                defaultValue: false,
-                helpText: "If enabled, users will receive points when they submit a comment. If disabled, users will not receive points for submitting comments.",
+                type: "number",
+                name: AppSetting.CommentIncrement,
+                label: "Increment User Score When Commenting",
+                helpText:
+                    "How much to increment a user's score by when they make a new comment. Set to 0 to disable",
+                defaultValue: 0,
+                onValidate: numberFieldHasValidOption,
             },
             {
                 type: "string",
                 name: AppSetting.FlairFormatting,
                 label: "Flair Formatting (All placeholders allow single or double curly braces)",
                 helpText:
-                    "How the flair should be formatted. Placeholders Supported: place, total, symbol, level",
+                    "How the flair should be formatted. Placeholders Supported: place, total, symbol, level, rank",
                 defaultValue: TemplateDefaults.FlairFormatting,
                 onValidate: stringOrParagraphFieldContainsText,
             },
@@ -598,7 +600,9 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnUnflairedPost,
                 label: "Notify users when they try to award points on a post without flair if it's not allowed",
                 options: NotifyOnUnflairedPostReplyOptionChoices,
-                defaultValue: [NotifyOnUnflairedPostReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnUnflairedPostReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -617,7 +621,9 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify the user when they try to use the normal command on a user who has already received a point for that comment",
                 options: NotifyOnPointAlreadyAwardedToUserOptionChoices,
-                defaultValue: [NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -635,7 +641,9 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify the user when they try to award a point to the Post Author (OP)",
                 options: NotifyOnPostAuthorAwardReplyOptionChoices,
-                defaultValue: [NotifyOnPostAuthorAwardReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnPostAuthorAwardReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -665,7 +673,9 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnModOnlyDisallowed,
                 label: "Notify users when only moderators can award points",
                 options: NotifyOnModOnlyDisallowedReplyOptionChoices,
-                defaultValue: [NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -721,7 +731,9 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnOPOnlyDisallowed,
                 label: "Notify Users When Only OP, Approved Users, And Moderators Can Award Points",
                 options: NotifyOnOPOnlyDisallowedReplyOptionChoices,
-                defaultValue: [NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -738,7 +750,9 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnDisallowedFlair,
                 label: "Notify users when they try to award points on a post with a disallowed flair",
                 options: NotifyOnDisallowedFlairReplyOptionChoices,
-                defaultValue: [NotifyOnDisallowedFlairReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnDisallowedFlairReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -860,7 +874,9 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify users when a moderator or trusted user awards a point",
                 options: NotifyOnModAwardSuccessOptionChoices,
-                defaultValue: [NotifyOnModAwardSuccessReplyOptions.ReplyAsComment],
+                defaultValue: [
+                    NotifyOnModAwardSuccessReplyOptions.ReplyAsComment,
+                ],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1148,14 +1164,11 @@ export function numberFieldHasValidOption(
     event: SettingsFormFieldValidatorEvent<number>,
 ) {
     if (typeof event.value !== "number" || isNaN(event.value)) {
-        return "Value must be a number.";
+        return "Value must be a number";
     }
 
     if (event.value < 0) {
-        return "Value must be greater than 0.";
-    }
-    if (event.value > 10_000) {
-        return "Value must be less than 10,000";
+        return "Value must be greater than 0";
     }
 }
 
@@ -1164,11 +1177,11 @@ function stringOrParagraphFieldContainsText(
     _context: TriggerContext,
 ): string | void {
     if (typeof event.value !== "string") {
-        return "Value must be a string.";
+        return "Value must be a string";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting).";
+        return "Field cannot be empty (even if this is an irrelevant setting)";
     }
 }
 
@@ -1177,11 +1190,11 @@ function levelThresholdIsValid(
     _: TriggerContext,
 ): string | void {
     if (typeof event.value !== "string") {
-        return "Value must be a string.";
+        return "Value must be a string";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting).";
+        return "Field cannot be empty (even if this is an irrelevant setting)";
     }
 
     const lines = event.value.split("\n").map((line) => line.trim());
@@ -1189,8 +1202,8 @@ function levelThresholdIsValid(
         return "You must specify at least one valid level threshold";
     }
 
-    const levelThresholdRegex = /^(\d+)\|(\d+)$/;
+    const levelThresholdRegex = /^(\d+)\|(\d+)\|(.+)$/;
     if (!lines.every((line) => levelThresholdRegex.test(line))) {
-        return "Each level threshold must be formatted as `<level>|<points>` with no spaces before or after the bar";
+        return `Each level threshold must be formatted as "<level>|<points>|<rankName>" with no spaces before or after bars`;
     }
 }

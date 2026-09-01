@@ -14,19 +14,7 @@
 import { TriggerContext } from "@devvit/public-api";
 import { AppSetting } from "../config/settings";
 import { logger } from "../utils/logger";
-
-/*
- * LevelThresholds format:
- *
- * 1|0
- * 2|100
- * 3|500
- * 4|1500
- * 5|5000
- * 6|15000
- * 7|50000
- * 8|100000
- */
+import { USER_STORE_KEY } from "../config/constants";
 
 export async function getLevelFromScore(
     context: TriggerContext,
@@ -44,6 +32,7 @@ export async function getLevelFromScore(
     const thresholds: Array<{
         level: number;
         points: number;
+        rank: string;
     }> = [];
 
     for (const line of levelThresholds.split(/\r?\n/)) {
@@ -56,14 +45,33 @@ export async function getLevelFromScore(
 
         const split = trimmedLine.split("|").map((value) => value.trim());
 
-        if (split.length < 3) {
+        if (split.length !== 3) {
             logger.warn("⚠️ Invalid level threshold format", {
                 line: trimmedLine,
+                parts: split,
+                partCount: split.length,
             });
             continue;
         }
 
         const level = Number(split[0]);
+        const xpRequired = Number(split[1]);
+        const title = split[2];
+
+        if (
+            !Number.isInteger(level) ||
+            !title ||
+            !Number.isFinite(xpRequired)
+        ) {
+            logger.warn("⚠️ Invalid level threshold values", {
+                line: trimmedLine,
+                level: split[0],
+                title: split[1],
+                xpRequired: split[2],
+            });
+            continue;
+        }
+
         const points = Number(split[1]);
 
         if (!Number.isInteger(level) || !Number.isFinite(points)) {
@@ -76,6 +84,7 @@ export async function getLevelFromScore(
         thresholds.push({
             level,
             points,
+            rank: title,
         });
     }
 
@@ -114,13 +123,27 @@ export async function getLevelFromScore(
     return level;
 }
 
+//todo: make this work
+export async function getXpRequiredForNextRank(): Promise<Number> {
+    let xpRequiredForNextRank = 0;
+
+    return xpRequiredForNextRank;
+}
+
+//todo: make this work
+export async function getTitleFromScore(): Promise<string> {
+    let title = "";
+
+    return title;
+}
 export async function incrementLevel(
     context: TriggerContext,
     user: string,
-    score: number,
+    currentScore: number,
     increment: number,
-): Promise<number> {
-    const level = await getLevelFromScore(context, user, score);
-
-    return level + increment;
+): Promise<string | undefined> {
+    const level = await getLevelFromScore(context, user, currentScore);
+    const increase = level + increment;
+    context.redis.set(`${USER_STORE_KEY}`, increase.toString());
+    return context.redis.get(`${USER_STORE_KEY}:${user}`);
 }

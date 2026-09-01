@@ -1,26 +1,48 @@
 import { logger } from "./logger";
-import { AppSetting, ExistingFlairOverwriteHandling, NotifyOnModAwardSuccessReplyOptions, NotifyOnTrustedUserAwardSuccessReplyOptions, TemplateDefaults } from "../config/settings";
+import {
+    AppSetting,
+    ExistingFlairOverwriteHandling,
+    NotifyOnModAwardSuccessReplyOptions,
+    NotifyOnTrustedUserAwardSuccessReplyOptions,
+    TemplateDefaults,
+} from "../config/settings";
 import { SettingsValues, TriggerContext, User } from "@devvit/public-api";
 import { POINTS_STORE_KEY } from "../config/constants";
-import { CommentSubmit, CommentUpdate } from "@devvit/protos";
+import { CommentUpdate } from "@devvit/protos";
 import { setCleanupForUsers } from "../jobs/cleanup";
 import { flairToggleKeyExists, setModDupKey } from "../database/redis";
-import { getUserIsSuperuser, handleAutoSuperuserPromotion, isModerator } from "../config/commentTriggerContext";
+import {
+    getUserIsSuperuser,
+    handleAutoSuperuserPromotion,
+    isModerator,
+} from "../config/commentTriggerContext";
 import { formatFlair, formatMessage } from "./formatting";
 import { SafeWikiClient, updateUserWiki } from "../jobs/leaderboard";
-import { getParentComment, InitialUserWikiOptions } from "../handlers/commentSubmit";
-import { getLevelFromScore } from "../database/levels";
+import {
+    getParentComment,
+    InitialUserWikiOptions,
+} from "../handlers/commentSubmit";
+import type { CommentSubmit, PostSubmit } from "@devvit/protos";
 
+export function getEventType(
+    event: CommentSubmit | PostSubmit,
+): "CommentSubmit" | "PostSubmit" {
+    if ("comment" in event) {
+        return "CommentSubmit";
+    }
+
+    return "PostSubmit";
+}
 export interface ScoreResult {
     score: number;
     place?: number;
-    userHasFlair?: boolean;
-    flairIsNumber?: boolean;
+    userHasFlair: boolean;
+    flairIsNumber: boolean;
 }
 
 export async function awardPointToUserModCommand(
     event: CommentSubmit | CommentUpdate,
-    context: TriggerContext
+    context: TriggerContext,
 ) {
     if (!event.comment || !event.subreddit || !event.author || !event.post) {
         logger.warn("❌ Missing required event data", { event });
@@ -28,6 +50,7 @@ export async function awardPointToUserModCommand(
     }
     const settings = await context.settings.getAll();
     const pointName = (settings[AppSetting.PointName] as string) ?? "point";
+    const modCommand = (settings[AppSetting.ModAwardCommand] as string) ?? "";
 
     const parentComment = await getParentComment(event, context);
     if (!parentComment || !parentComment.authorId) {
@@ -35,6 +58,10 @@ export async function awardPointToUserModCommand(
         return;
     }
 
+    if (!commentContainsModCommand) {
+        logger.info(`Comment doesn't contain mod command, returning.`);
+        return;
+    }
     const awarder = event.author.name;
     const awardee = parentComment.authorName;
 
@@ -67,8 +94,10 @@ export async function awardPointToUserModCommand(
         return;
     }
 
-    const newScore: ScoreResult = {
-        score: existingScore.score + 1,
+    const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
+
+    const modAwardScoreResult: ScoreResult = {
+        score: existingScore.score + increment,
         userHasFlair: existingScore.userHasFlair,
         flairIsNumber: existingScore.flairIsNumber,
     };
@@ -77,12 +106,11 @@ export async function awardPointToUserModCommand(
     await setModDupKey(event, context, "1");
 
     // ⭐ Auto-superuser logic
-    const modCommand = (settings[AppSetting.ModAwardCommand] as string) ?? "";
     await handleAutoSuperuserPromotion(
         event,
         context,
-        newScore.score,
-        modCommand
+        modAwardScoreResult.score,
+        modCommand,
     );
 
     // 📣 Notify on success
@@ -100,7 +128,7 @@ export async function awardPointToUserModCommand(
     const awarderIsModerator = await isModerator(
         context,
         event.subreddit.name,
-        awarder
+        awarder,
     );
     const awarderIsSuperUser = await getUserIsSuperuser(context, awarder);
 
@@ -116,7 +144,7 @@ export async function awardPointToUserModCommand(
     const modSuccessMessage = formatMessage(event, modSuccessTemplate, {
         awardee,
         awarder,
-        total: newScore.score.toString(),
+        total: modAwardScoreResult.score.toString(),
         name: pointName,
         symbol: (settings[AppSetting.PointSymbol] as string) ?? "",
         leaderboard,
@@ -130,13 +158,13 @@ export async function awardPointToUserModCommand(
         {
             awardee,
             awarder,
-            total: newScore.score.toString(),
+            total: modAwardScoreResult.score.toString(),
             name: pointName,
             symbol: (settings[AppSetting.PointSymbol] as string) ?? "",
             leaderboard,
             awardeePage,
             awarderPage,
-        }
+        },
     );
 
     if (
@@ -163,7 +191,7 @@ export async function awardPointToUserModCommand(
         logger.info("🛡️ Mod award successful", {
             awarder,
             awardee,
-            newScore,
+            scoreResult: modAwardScoreResult,
         });
     } else if (
         trustedUserNotifyMode !==
@@ -197,11 +225,11 @@ export async function awardPointToUserModCommand(
         const safeWiki = new SafeWikiClient(context.reddit);
         const awarderPage = await safeWiki.getWikiPage(
             subredditName,
-            `user/${awarder.toLowerCase()}`
+            `user/${awarder.toLowerCase()}`,
         );
         const recipientPage = await safeWiki.getWikiPage(
             subredditName,
-            `user/${awardee}`
+            `user/${awardee}`,
         );
 
         if (!awarderPage) {
@@ -248,11 +276,16 @@ export async function awardPointToUserModCommand(
 
     if (flairHandlingDisabled) {
         logger.info(
-            "Flair handling is disabled for this user, skipping flair update"
+            "Flair handling is disabled for this user, skipping flair update",
         );
         return;
     }
 
+    const newScore: ScoreResult = {
+        score: existingScore.score + increment,
+        userHasFlair: existingScore.userHasFlair,
+        flairIsNumber: existingScore.flairIsNumber,
+    };
     setUserScore(context, awardee, newScore, settings);
 }
 
@@ -260,7 +293,7 @@ export async function setUserScore(
     context: TriggerContext,
     username: string,
     newScore: ScoreResult,
-    appSettings: SettingsValues
+    appSettings: SettingsValues,
 ) {
     // Queue user for cleanup checks in 24 hours, overwriting existing value.
     await setCleanupForUsers([username], context);
@@ -277,9 +310,11 @@ export async function setUserScore(
     const existingFlairOverwriteHandling =
         (appSettings[AppSetting.ExistingFlairHandling] as
             | ExistingFlairOverwriteHandling
-            | undefined) ?? ExistingFlairOverwriteHandling.OverwriteNumeric;
+            | undefined) ??
+        ExistingFlairOverwriteHandling.OverwriteNumeric;
 
     let shouldSetUserFlair: boolean | undefined;
+
     if (
         existingFlairOverwriteHandling ===
             ExistingFlairOverwriteHandling.OverwriteNumericSymbol ||
@@ -293,15 +328,19 @@ export async function setUserScore(
     ) {
         shouldSetUserFlair = false;
     } else {
-        shouldSetUserFlair = !newScore.userHasFlair || newScore.flairIsNumber;
+        shouldSetUserFlair =
+            !newScore.userHasFlair || newScore.flairIsNumber;
     }
 
     if (shouldSetUserFlair) {
         console.log(
-            `Setting points flair for ${username}. New score: ${newScore.score}`
+            `Setting points flair for ${username}. New score: ${newScore.score}`,
         );
 
-        let cssClass = appSettings[AppSetting.CSSClass] as string | undefined;
+        let cssClass = appSettings[AppSetting.CSSClass] as
+            | string
+            | undefined;
+
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         if (!cssClass) {
             cssClass = undefined;
@@ -310,6 +349,7 @@ export async function setUserScore(
         let flairTemplate = appSettings[AppSetting.FlairTemplate] as
             | string
             | undefined;
+
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         if (!flairTemplate) {
             flairTemplate = undefined;
@@ -324,7 +364,7 @@ export async function setUserScore(
 
         if (!context.subredditName) {
             logger.error(
-                "❌ No subreddit name found in context, cannot set user flair"
+                "❌ No subreddit name found in context, cannot set user flair",
             );
             return;
         }
@@ -349,13 +389,20 @@ export async function setUserScore(
             TemplateDefaults.FlairFormatting;
 
         const redisKey = POINTS_STORE_KEY;
-        const leaderboard = await context.redis.zRange(redisKey, 0, -1, {
-            by: "rank",
-            reverse: true,
-        });
+
+        // Get users ordered by score, highest score first.
+        const leaderboard = await context.redis.zRange(
+            redisKey,
+            0,
+            -1,
+            {
+                by: "score",
+                reverse: true,
+            },
+        );
 
         const index = leaderboard.findIndex(
-            (member) => member.member === username
+            (member) => member.member === username,
         );
 
         const userRank = index >= 0 ? index + 1 : undefined;
@@ -366,28 +413,154 @@ export async function setUserScore(
             totalUsers: leaderboard.length,
         });
 
-        const userScore = userRank ?? 0;
+        if (userRank === undefined) {
+            logger.warn("❌ Could not determine user leaderboard rank", {
+                username,
+                score: newScore.score,
+            });
+            return;
+        }
+
+        /*
+         * Get the user's level and rank/title from LevelThresholds.
+         *
+         * Format:
+         * 1|0|Newcomer
+         * 2|100|Supporter
+         * 3|500|Bronze
+         * 4|1500|Silver
+         * 5|5000|Gold
+         * 6|15000|Diamond
+         * 7|50000|Elite
+         * 8|100000|Platinum
+         * 9|200000|Champion
+         * 10|300000|Legend
+         * 11|500000|Mythic
+         * 12|1000000|A League Of Their Own
+         */
+
+        const levelThresholds =
+            appSettings[AppSetting.LevelThresholds];
+
+        let level = 1;
+        let rankName = "Newcomer";
+
+        if (
+            typeof levelThresholds === "string" &&
+            levelThresholds.trim()
+        ) {
+            const thresholds: Array<{
+                level: number;
+                points: number;
+                rankName: string;
+            }> = [];
+
+            for (const line of levelThresholds.split(/\r?\n/)) {
+                const trimmedLine = line.trim();
+
+                if (!trimmedLine) {
+                    continue;
+                }
+
+                const split = trimmedLine
+                    .split("|")
+                    .map((value) => value.trim());
+
+                if (split.length < 3) {
+                    logger.warn(
+                        "⚠️ Invalid level threshold format",
+                        {
+                            line: trimmedLine,
+                        },
+                    );
+                    continue;
+                }
+
+                const thresholdLevel = Number(split[0]);
+                const thresholdPoints = Number(split[1]);
+                const thresholdRankName = split
+                    .slice(2)
+                    .join("|")
+                    .trim();
+
+                if (
+                    !Number.isInteger(thresholdLevel) ||
+                    !Number.isFinite(thresholdPoints) ||
+                    !thresholdRankName
+                ) {
+                    logger.warn(
+                        "⚠️ Invalid level threshold values",
+                        {
+                            line: trimmedLine,
+                        },
+                    );
+                    continue;
+                }
+
+                thresholds.push({
+                    level: thresholdLevel,
+                    points: thresholdPoints,
+                    rankName: thresholdRankName,
+                });
+            }
+
+            // Sort from lowest required points to highest.
+            thresholds.sort((a, b) => a.points - b.points);
+
+            // Find the highest level the user qualifies for.
+            for (const threshold of thresholds) {
+                if (newScore.score >= threshold.points) {
+                    level = threshold.level;
+                    rankName = threshold.rankName;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        logger.debug("📊 User level and rank", {
+            username,
+            score: newScore.score,
+            level,
+            rankName,
+        });
 
         logger.debug("Checking values", {
             userRank,
-            newScore: userScore,
+            newScore: newScore.score,
+            level,
+            rankName,
         });
 
         const flairText = formatFlair(flairFormatting, {
-            place: userScore > 0 ? `${userScore}` : "0",
+            // Leaderboard position.
+            place: userRank.toString(),
+
+            // User's actual point total.
             total: newScore.score.toString(),
+
+            // Point symbol.
             symbol: appSettings[AppSetting.PointSymbol] as string,
-            level: (await getLevelFromScore(context, username, newScore.score)).toString(),
+
+            // Numeric level.
+            level: level.toString(),
+
+            // Rank/title from LevelThresholds.
+            rank: rankName,
         });
 
         logger.info("Setting user flair", {
             username,
-            newScore: userScore,
+            score: newScore.score,
+            leaderboardRank: userRank,
+            level,
+            rankName,
             cssClass,
             flairTemplate,
             flairText,
             subreddit: context.subredditName,
         });
+
         await context.reddit.setUserFlair({
             subredditName: context.subredditName,
             username,
@@ -397,7 +570,7 @@ export async function setUserScore(
         });
     } else {
         console.log(
-            `${username}: Flair not set (option disabled or flair in wrong state)`
+            `${username}: Flair not set (option disabled or flair in wrong state)`,
         );
     }
 }
@@ -410,6 +583,8 @@ export async function getCurrentScore(
         logger.error("❌ Subreddit name is not available in context.");
         return;
     }
+
+    const settings = await context.settings.getAll();
 
     const userFlair = await user.getUserFlairBySubreddit(context.subredditName);
 
@@ -434,27 +609,23 @@ export async function getCurrentScore(
 
     if (userFlair?.flairText) {
         const flairTextTemplate =
-            ((await context.settings.get(AppSetting.FlairFormatting)) as
-                | string
-                | undefined) ?? "{total}{symbol} | #{place}";
+            (settings[AppSetting.FlairFormatting] as string | undefined) ??
+            "{total}{symbol} | #{place}";
 
         const escapeRegex = (text: string): string =>
-            text.replaceAll(/[.*+?^${}()|[\]\\]/gi, "\\$&");
+            text.replaceAll(/[\.\*\+\?\^\$\{\}\(\)\|\[\]\\]/gi, "\\$&");
 
         // Escape the template first.
         let pattern = escapeRegex(flairTextTemplate);
 
         // Replace placeholders with regex.
         pattern = pattern.replaceAll(escapeRegex("{{total}}"), "(\\d+)");
-
         pattern = pattern.replaceAll(escapeRegex("{{symbol}}"), ".*?");
-
         pattern = pattern.replaceAll(escapeRegex("{{place}}"), "\\d+");
-
+        pattern = pattern.replaceAll(escapeRegex("{{rank}}"), "(\\d+)");
+        pattern = pattern.replaceAll(escapeRegex("{rank}"), "(\\d+)");
         pattern = pattern.replaceAll(escapeRegex("{total}"), "(\\d+)");
-
         pattern = pattern.replaceAll(escapeRegex("{symbol}"), ".*?");
-
         pattern = pattern.replaceAll(escapeRegex("{place}"), "\\d+");
 
         const regex = new RegExp(`^${pattern}$`);

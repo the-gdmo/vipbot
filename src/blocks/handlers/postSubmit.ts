@@ -1,8 +1,12 @@
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { PostSubmit } from "@devvit/protos";
-import { getCurrentScore, ScoreResult, setUserScore } from "../utils/common-utils";
-import { AppSetting, } from "../config/settings";
+import {
+    getCurrentScore,
+    ScoreResult,
+    setUserScore,
+} from "../utils/common-utils";
+import { AppSetting } from "../config/settings";
 import { CommentTriggerContext } from "../config/commentTriggerContext";
 
 /**
@@ -11,7 +15,7 @@ import { CommentTriggerContext } from "../config/commentTriggerContext";
  * This is the main entry point for VIPBot post processing.
  */
 export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
-    if (!event.post || !event.author) {
+    if (!event.post || !event.author || !context.subredditName) {
         logger.warn("❌ Missing required event data", { event });
         return;
     }
@@ -45,8 +49,9 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         return;
     }
 
-    const posterCanReceivePointsOnPosting = settings[AppSetting.AllowUsersToReceivePointsOnPostSubmit] as boolean | undefined;
-    if (!posterCanReceivePointsOnPosting) {
+    const posterCanReceivePointsOnPosting =
+        (settings[AppSetting.PostIncrement] as number) ?? 0;
+    if (posterCanReceivePointsOnPosting === 0) {
         logger.info("❌ Poster cannot receive points on posting", {
             OP: user.username,
             postId: event.post.id,
@@ -54,8 +59,12 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         return;
     }
 
+    const increment = (settings[AppSetting.PostIncrement] as number) ?? 0;
+
     const newScore: ScoreResult = {
-        score: existingScore.score + 1,
+        score: existingScore.score + increment,
+        userHasFlair: existingScore.userHasFlair,
+        flairIsNumber: existingScore.flairIsNumber,
     };
 
     setUserScore(context, user.username, newScore, settings);
