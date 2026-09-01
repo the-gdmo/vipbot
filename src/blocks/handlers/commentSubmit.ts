@@ -841,9 +841,9 @@ export async function userHasPermission(
     const hasPermission =
         accessControl === AccessControlOptions.Everyone ||
         (accessControl === AccessControlOptions.ModsOnly && isMod) ||
-        (accessControl === AccessControlOptions.ModsAndSuperusers &&
+        (accessControl === AccessControlOptions.ModsAndVIPS &&
             (isMod || isSuperUser)) ||
-        (accessControl === AccessControlOptions.ModsSuperusersAndPostAuthor &&
+        (accessControl === AccessControlOptions.ModsVIPSAndPostAuthor &&
             (isMod || isSuperUser || isOP)) ||
         (accessControl === AccessControlOptions.ModsAndPostAuthor &&
             (isMod || isOP));
@@ -866,12 +866,12 @@ export async function userHasPermission(
                 notifyKey = AppSetting.NotifyOnModOnlyDisallowed;
                 break;
 
-            case AccessControlOptions.ModsAndSuperusers:
+            case AccessControlOptions.ModsAndVIPS:
                 msgKey = AppSetting.ApprovedOnlyDisallowedMessage;
                 notifyKey = AppSetting.NotifyOnApprovedOnlyDisallowed;
                 break;
 
-            case AccessControlOptions.ModsSuperusersAndPostAuthor:
+            case AccessControlOptions.ModsVIPSAndPostAuthor:
                 msgKey = AppSetting.OPOnlyDisallowedMessage;
                 notifyKey = AppSetting.NotifyOnOPOnlyDisallowed;
                 break;

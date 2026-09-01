@@ -46,13 +46,13 @@ export async function getUserIsSuperuser(
 ) {
     const settings = await context.settings.getAll();
 
-    const superUserSetting =
-        (settings[AppSetting.SuperUsers] as string | undefined) ?? "";
-    const superUsers = superUserSetting
+    const VIPUserSetting =
+        (settings[AppSetting.VIPUsers] as string | undefined) ?? "";
+    const VIPUsers = VIPUserSetting
         .split(",")
         .map((user) => user.trim().toLowerCase());
 
-    if (superUsers.includes(awarder.toLowerCase())) {
+    if (VIPUsers.includes(awarder.toLowerCase())) {
         return true;
     }
 

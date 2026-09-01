@@ -17,7 +17,7 @@ export enum AppSetting {
     NotifyOnNormalAwardSuccess = "notifyOnNormalAwardSuccess",
     NormalAwardSuccessMessage = "normalAwardSuccessMessage",
     ModAwardCommand = "modAwardCommand",
-    SuperUsers = "superUsers",
+    VIPUsers = "VIPUsers",
     NotifyOnAutoSuperuser = "notifyOnAutoSuperuser",
     AutoSuperuserThreshold = "autoSuperuserThreshold",
     AutoSuperuserTemplate = "autoSuperuserTemplate",
@@ -393,8 +393,8 @@ const LeaderboardModeOptionChoices = [
 
 export enum AccessControlOptions {
     ModsOnly = "moderators-only",
-    ModsAndSuperusers = "moderators-and-superusers",
-    ModsSuperusersAndPostAuthor = "moderators-superusers-and-op",
+    ModsAndVIPS = "moderators-and-vips",
+    ModsVIPSAndPostAuthor = "moderators-vips-and-op",
     ModsAndPostAuthor = "moderators-and-op",
     Everyone = "everyone",
 }
@@ -405,16 +405,16 @@ const AccessControlOptionChoices = [
         value: AccessControlOptions.ModsOnly,
     },
     {
-        label: "Moderators and Superusers",
-        value: AccessControlOptions.ModsAndSuperusers,
+        label: "Moderators and VIPS",
+        value: AccessControlOptions.ModsAndVIPS,
     },
     {
         label: "Moderators and Post Author (OP)",
         value: AccessControlOptions.ModsAndPostAuthor,
     },
     {
-        label: "Moderators, Superusers, and Post Author (OP)",
-        value: AccessControlOptions.ModsSuperusersAndPostAuthor,
+        label: "Moderators, VIPS, and Post Author (OP)",
+        value: AccessControlOptions.ModsVIPSAndPostAuthor,
     },
     {
         label: "Everyone",
@@ -539,7 +539,7 @@ export const appSettings: SettingsFormField[] = [
                 helpText: "Choose who is allowed to award points",
                 options: AccessControlOptionChoices,
                 defaultValue: [
-                    AccessControlOptions.ModsAndSuperusers,
+                    AccessControlOptions.ModsAndVIPS,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -786,7 +786,7 @@ export const appSettings: SettingsFormField[] = [
         fields: [
             {
                 type: "paragraph",
-                name: AppSetting.SuperUsers,
+                name: AppSetting.VIPUsers,
                 label: "A list of trusted users other than mods who can award points",
                 helpText: "Each username should be on a new line",
             },

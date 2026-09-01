@@ -6,7 +6,7 @@ The app allows you to reward active and helpful members of your subreddit with X
 
 VIPBot can automatically track community participation and maintain leaderboards, while moderators can manually manage VIP status, XP, coins, and reputation.
 
-The app is designed to be highly configurable so that each subreddit can decide which features it wants to use.
+The app is highly configurable, so each subreddit can choose which features it wants to use.
 
 ---
 
@@ -38,7 +38,7 @@ The default levels are:
 |     7 | Elite     |      50,000 |
 |     8 | Legendary |     100,000 |
 
-Level requirements and rewards can be expaned in [VIPBot's settings](https://developers.reddit.com/apps/vipbot2).
+Level requirements and rewards can be expanded in [VIPBot's settings](https://developers.reddit.com/apps/vipbot2).
 
 ---
 
@@ -332,7 +332,7 @@ This allows communities to use temporary VIP memberships without requiring moder
 
 ### 📅 Daily Rewards
 
-VIPBot can provide users with a configurable daily coin reward when they participate.
+VIPBot can provide users with a configurable daily coin reward for participating.
 
 A user can receive the reward once per UTC day.
 
@@ -610,9 +610,9 @@ VIPBot and RepBot were partially coded based on ideas and code developed for [Re
 
 ## About
 
-VIPBot is an open-source Reddit application designed for use with Reddit's Devvit platform. The project is intended to provide communities with a flexible system for recognizing active, helpful, and trusted members.
+VIPBot is an open-source Reddit application designed for use with Reddit's Devvit platform. The project provides communities with a flexible system for recognizing active, helpful, and trusted members.
 
-VIPBot combines: **XP, Levels, Coins, Reputation, Achievements, Streaks, and Leaderboards** into a single community-recognition system.
+VIPBot combines **XP, Levels, Coins, Reputation, Achievements, Streaks, and Leaderboards** into a single community-recognition system.
 
 This app is open source and licensed under the BSD 3-Clause License. You can find the source code on GitHub [here](https://github.com/the-gdmo/vipbot).
 
@@ -630,3 +630,6 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 * Import [RepBot](https://github.com/the-gdmo/TheRepBot) code
 * Create VIPBot
 * Upload app image
+
+
+
