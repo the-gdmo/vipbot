@@ -1310,7 +1310,7 @@ export async function executeUserCommand(
     }
     const settings = await context.settings.getAll();
     const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
-
+    const prefix = settings[AppSetting.CommandPrefix] as string ?? "/";
     const commentBody = event.comment.body;
     const awarder = event.author.name;
     const recipient = parentComment.authorName;
@@ -1486,6 +1486,25 @@ export async function executeUserCommand(
         return false;
     }
 
+    // const infoCommand = `${prefix}info`;
+    // const helpCommand = `${prefix}info`;
+    // const vipCommand = `${prefix}info`;
+    // const rankCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    // const infoCommand = `${prefix}info`;
+    
+    // if (commentBody.includes(infoCommand)) {
+
+    // }
     logger.info(`Point not awarded yet for this command`);
 
     await context.redis.set(key, "1");

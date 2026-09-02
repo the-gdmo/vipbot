@@ -363,7 +363,7 @@ The command prefix can be changed through the app settings.
 | ------------------------- | ------------------------------------------- |
 | `/info`                   | Display an explanation of how the bot works |
 | `/help`                   | Display available commands                  |
-| `/vip`                    | Display your VIPBot profile                 |
+| `/profile`                    | Display your VIPBot profile                 |
 | `/rank`                   | Display your XP rank                        |
 | `/rank u/username`        | Display another user's rank                 |
 | `/balance`                | Display your coin balance                   |
@@ -401,7 +401,7 @@ NOTE: All placeholders are case-insensitive.
 
 ### User Information
 
-* `inquirer`: The username of the Redditor trying to understand how to use the bot (no `u/`).
+* `prefix`: The prefix associated with all commands. Specified in "Command Prefix".
 * `username`: The user's Reddit username without `u/`.
 * `author`: The username of the author of a post or comment.
 * `subreddit`: The subreddit name without `r/`.

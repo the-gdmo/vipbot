@@ -53,7 +53,7 @@ export async function onCommentSubmit(
     const settings = await context.settings.getAll();
     const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
     const awarder = event.author.name;
-    const commentBody = event.comment.body.toLowerCase();
+    const commentBody = event.comment.body ?? "";
     const triggers = await getTriggers(context);
     const triggerUsed = triggers.find((t) => commentBody.includes(t));
     const parentComment: Comment | undefined = await getParentComment(

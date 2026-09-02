@@ -5,6 +5,7 @@ import {
 } from "@devvit/public-api";
 
 export enum AppSetting {
+    CommandPrefix = "commandPrefix",
     PointTriggerWords = "pointTriggerWords",
     PointSymbol = "pointSymbol",
     AccessControl = "accessControl",
@@ -72,6 +73,10 @@ export enum AppSetting {
     PostIncrement = "postIncrement",
     CommentIncrement = "commentIncrement",
     NewPostMessage = "newPostMessage",
+    InfoMessageConfirmation = "infoMessageConfirmation",
+    DMInfoMessage = "dmInfoMessage",
+    HelpMessageConfirmation = "helpMessageConfirmation",
+
 }
 
 export enum TemplateDefaults {
@@ -110,9 +115,11 @@ export enum TemplateDefaults {
         "{awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
     ModsAndPostAuthorDisallowedMessage = "Only moderators and Post Authors (OPs) can award {name}s.",
     UserPointsInitializedMessage = "Your {name} points have been initialized to 1. [Message the mods]({modmailLink}) if you have any questions.",
-    NewPostMessage = "Hello. To all commentors/OP, if this is your first time experiencing u/vipbot2, use `/info` to get information in your dms about how to use this bot.",
-    DMInfoMessage = "Hey {inquirer}! I see you are curious as to how to use me in r/{subreddit}.\n\n" +
-        "Please use the /help command",
+    NewPostMessage = "Hello. To all commentors/OP, if this is your first time experiencing u/vipbot2, use `{prefix}info` to get information in your dms about how to use this bot.",
+    DMInfoMessage = "Hey u/{username}! I see you are curious as to how to use me in r/{subreddit}.\n\n" +
+        "Please use the `{prefix}help` command on [the post you used this on]({permalink}) to get another message listing all usable bot commands.",
+    InfoMessageConfirmation = "I just sent you a dm with all the info about the bot itself.",
+    HelpMessageConfirmation = "I just sent you a dm with all the info about the commands that you have access to with me.",
 }
 
 export enum AutoSuperuserReplyOptions {
@@ -546,6 +553,14 @@ export const appSettings: SettingsFormField[] = [
         label: "Point System Settings",
         fields: [
             {
+                type: "string",
+                name: AppSetting.CommandPrefix,
+                label: "Command Prefix",
+                helpText: `What all commands should start with (eg "/")`,
+                defaultValue: "/",
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
                 type: "paragraph",
                 name: AppSetting.LevelThresholds,
                 label: "Level Thresholds (All placeholders allow single or double curly braces)",
@@ -930,11 +945,35 @@ export const appSettings: SettingsFormField[] = [
         fields: [
             {
                 type: "paragraph",
+                name: AppSetting.InfoMessageConfirmation,
+                label: "Info Message Confirmation Message",
+                helpText: "Message sent to visibly display to users that the info message was sent to them",
+                defaultValue: TemplateDefaults.InfoMessageConfirmation,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.HelpMessageConfirmation,
+                label: "Help Message Confirmation Message",
+                helpText: "Message sent to visibly display to users that the help message was sent to them",
+                defaultValue: TemplateDefaults.HelpMessageConfirmation,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "paragraph",
                 name: AppSetting.NewPostMessage,
                 label: "New Post Message",
                 helpText:
                     "Message displayed on every new post and pinned by bot",
                 defaultValue: TemplateDefaults.NewPostMessage,
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                type: "paragraph",
+                name: AppSetting.DMInfoMessage,
+                label: "DM Info Message",
+                helpText: `Message to be dmed to a user any time they run the "info" command`,
+                defaultValue: TemplateDefaults.DMInfoMessage,
                 onValidate: stringOrParagraphFieldContainsText,
             },
             {
