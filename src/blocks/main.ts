@@ -5,6 +5,9 @@ import { onPostSubmit } from "./handlers/postSubmit";
 import { onCommentSubmit } from "./handlers/commentSubmit";
 import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/installEvents";
 import { Devvit } from "@devvit/public-api";
+import { CLEANUP_JOB, UPDATE_MODINFO_JOB } from "./config/constants";
+import { cleanupDeletedAccounts } from "./jobs/cleanup";
+import { modInfoJob } from "./jobs/modInfo";
 
 /**
  *
@@ -53,6 +56,20 @@ Devvit.addTrigger({
     events: ["AppInstall", "AppUpgrade"],
     onEvent: onAppInstallOrUpgrade,
 });
+
+// ─────────────────────────────────────────────────────────────
+// Scheduler Jobs
+// ─────────────────────────────────────────────────────────────
+
+Devvit.addSchedulerJob({
+    name: CLEANUP_JOB,
+    onRun: cleanupDeletedAccounts,
+});
+
+Devvit.addSchedulerJob({
+    name: UPDATE_MODINFO_JOB,
+    onRun: modInfoJob,
+})
 
 // ─────────────────────────────────────────────────────────────
 // Export

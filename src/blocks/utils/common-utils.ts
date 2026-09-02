@@ -1801,15 +1801,6 @@ export async function setUserScoreOnPostSubmit(
             flairTemplateId: flairTemplate,
             text: flairText,
         });
-
-        // Queue a leaderboard update.
-        await context.scheduler.runJob({
-            name: "updateLeaderboard",
-            runAt: new Date(),
-            data: {
-                reason: `Awarded point(s) to ${username}. New score: ${newScore.score}`,
-            },
-        });
     } else {
         console.log(
             `${username}: Flair not set (option disabled or flair in wrong state)`,
@@ -2031,15 +2022,6 @@ export async function setUserScoreOnCommentSubmit(
             cssClass,
             flairTemplateId: flairTemplate,
             text: flairText,
-        });
-
-        // Queue a leaderboard update.
-        await context.scheduler.runJob({
-            name: "updateLeaderboard",
-            runAt: new Date(),
-            data: {
-                reason: `Awarded point(s) to ${username}. New score: ${newScore.score}`,
-            },
         });
     } else {
         console.log(

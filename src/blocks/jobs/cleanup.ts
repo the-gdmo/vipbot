@@ -84,14 +84,6 @@ export async function cleanupDeletedAccounts(
     if (deletedUsers.length > 0) {
         await context.redis.zRem(`${POINTS_STORE_KEY}`, deletedUsers);
         await context.redis.zRem(CLEANUP_LOG_KEY, deletedUsers);
-
-        await context.scheduler.runJob({
-            name: "updateLeaderboard",
-            runAt: new Date(),
-            data: {
-                reason: "One or more deleted accounts removed from database",
-            },
-        });
     }
 
     if (items.length > itemsToCheck) {

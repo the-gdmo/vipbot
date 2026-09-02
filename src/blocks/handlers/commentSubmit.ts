@@ -236,13 +236,6 @@ export async function onCommentSubmit(
         const handled = await executeUserCommand(event, context);
         // Trigger leaderboard update
         if (handled) {
-            await context.scheduler.runJob({
-                name: "updateLeaderboard",
-                runAt: new Date(),
-                data: {
-                    reason: `Updated score for ${user.username}. Triggered by user command.`,
-                },
-            });
             logger.info("✅ User command executed successfully");
             return;
         } else {
@@ -259,13 +252,6 @@ export async function onCommentSubmit(
             const handled = await executeModCommand(event, context);
             // Trigger leaderboard update
             if (handled) {
-                await context.scheduler.runJob({
-                    name: "updateLeaderboard",
-                    runAt: new Date(),
-                    data: {
-                        reason: `Updated score for ${user.username}. Triggered by mod command.`,
-                    },
-                });
                 logger.info("✅ Mod command executed successfully");
                 return;
             }
