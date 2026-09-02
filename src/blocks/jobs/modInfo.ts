@@ -10,7 +10,7 @@ function modInfoTemplate(context: JobContext): string {
         `## General Information\n\n` +
         `There is currently no information for this bot. Check back in the future.\n\n` +
         `NOTE: This page's capacity for content will only change when the bot is updated. ` +
-        `You can do this in [your subreddit's VIP Bot settings](https://developers.reddit.com/r/${context.subredditName}/apps/${context.appSlug})`
+        `You can update the bot in [your subreddit's VIP Bot settings](https://developers.reddit.com/r/${context.subredditName}/apps/${context.appSlug}).`
     );
 }
 
