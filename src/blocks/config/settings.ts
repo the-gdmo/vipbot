@@ -74,11 +74,8 @@ export enum AppSetting {
 }
 
 export enum TemplateDefaults {
-    LevelThresholds = `1|0|Newcomer\n2|100|Supporter\n3|500|Bronze\n` +
-        `4|1500|Silver\n5|5000|Gold\n6|15000|Diamond\n` +
-        `7|50000|Elite\n8|100000|Platinum\n9|200000|Champion\n` +
-        `10|300000|Legend\n11|500000|Mythic\n12|1000000|A League Of Their Own`,
-    FlairFormatting = "LVL {level} | Rank {rank} | {total}{symbol}",
+    LevelThresholds = "1|0\n2|100\n3|500\n4|1500\n5|5000\n6|15000\n7|50000\n8|100000\n9|200000\n10|300000\n11|500000\n1000000",
+    FlairFormatting = `Level {level}[#{place}] | Rank "{rank}" | {total}{symbol}`,
     UnflairedPostMessage = "Points cannot be awarded on posts without flair. Please award only on flaired posts.",
     OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
     LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
@@ -540,7 +537,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "paragraph",
                 name: AppSetting.LevelThresholds,
                 label: "Level Thresholds (All placeholders allow single or double curly braces)",
-                helpText: `Level thresholds for users to reach. Format: "<level>|<points>|<rankName>" (e.g., "1|0|Newcomer" means level 1 requires 0 points and gives the title of "Newcomer"). Each threshold should be on a new line`,
+                helpText: `Level thresholds for users to reach. Format: "<level>|<points>|<rankName>" (e.g., "1|0|NewComer" means level 1 requires 0 points and has a rankName of "NewComer"). Each threshold should be on a new line`,
                 defaultValue: TemplateDefaults.LevelThresholds,
                 onValidate: levelThresholdIsValid,
             },
@@ -1164,11 +1161,11 @@ export function numberFieldHasValidOption(
     event: SettingsFormFieldValidatorEvent<number>,
 ) {
     if (typeof event.value !== "number" || isNaN(event.value)) {
-        return "Value must be a number";
+        return "Value must be a number.";
     }
 
     if (event.value < 0) {
-        return "Value must be greater than 0";
+        return "Value must be greater than 0.";
     }
 }
 
@@ -1177,11 +1174,11 @@ function stringOrParagraphFieldContainsText(
     _context: TriggerContext,
 ): string | void {
     if (typeof event.value !== "string") {
-        return "Value must be a string";
+        return "Value must be a string.";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting)";
+        return "Field cannot be empty (even if this is an irrelevant setting).";
     }
 }
 
@@ -1190,11 +1187,11 @@ function levelThresholdIsValid(
     _: TriggerContext,
 ): string | void {
     if (typeof event.value !== "string") {
-        return "Value must be a string";
+        return "Value must be a string.";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting)";
+        return "Field cannot be empty (even if this is an irrelevant setting).";
     }
 
     const lines = event.value.split("\n").map((line) => line.trim());
@@ -1204,6 +1201,6 @@ function levelThresholdIsValid(
 
     const levelThresholdRegex = /^(\d+)\|(\d+)\|(.+)$/;
     if (!lines.every((line) => levelThresholdRegex.test(line))) {
-        return `Each level threshold must be formatted as "<level>|<points>|<rankName>" with no spaces before or after bars`;
+        return `Each level threshold must be formatted as "<level>|<points>|<rankName>" with no spaces before or after the bar`;
     }
 }

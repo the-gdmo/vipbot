@@ -1,16 +1,19 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
-import { getParentComment } from "../handlers/commentSubmit";
-import { AppSetting, AutoSuperuserReplyOptions, TemplateDefaults } from "./settings";
+import {
+    AppSetting,
+    AutoSuperuserReplyOptions,
+    TemplateDefaults,
+} from "./settings";
 import { formatMessage } from "../utils/formatting";
 import { logger } from "../utils/logger";
 import { POINTS_STORE_KEY } from "./constants";
-import { ScoreResult } from "../utils/common-utils";
+import { getParentComment, ScoreResult } from "../utils/common-utils";
 
 export const isModerator = async (
     context: TriggerContext,
     subName: string,
-    awarder: string
+    awarder: string,
 ) => {
     const filteredModeratorList = await context.reddit
         .getModerators({ subredditName: subName, username: awarder })
@@ -20,7 +23,7 @@ export const isModerator = async (
 
 export async function getUserCanAward(
     context: TriggerContext,
-    awarder: string
+    awarder: string,
 ) {
     // UsersWhoCannotAwardPoints
     const settings = await context.settings.getAll();
@@ -42,22 +45,22 @@ export async function getUserCanAward(
 
 export async function getUserIsSuperuser(
     context: TriggerContext,
-    awarder: string
+    awarder: string,
 ) {
     const settings = await context.settings.getAll();
 
     const VIPUserSetting =
         (settings[AppSetting.VIPUsers] as string | undefined) ?? "";
-    const VIPUsers = VIPUserSetting
-        .split(",")
-        .map((user) => user.trim().toLowerCase());
+    const VIPUsers = VIPUserSetting.split(",").map((user) =>
+        user.trim().toLowerCase(),
+    );
 
     if (VIPUsers.includes(awarder.toLowerCase())) {
         return true;
     }
 
     const autoSuperuserThreshold =
-        (settings[AppSetting.AutoSuperuserThreshold] as number) ??
+        (settings[AppSetting.AutoSuperuserThreshold] as number | undefined) ??
         0;
 
     if (autoSuperuserThreshold) {
@@ -124,7 +127,7 @@ export async function handleAutoSuperuserPromotion(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     newScore: number,
-    _commandUsed: string
+    _commandUsed: string,
 ) {
     const parentComment = await getParentComment(event, context);
     if (!event.author || !parentComment || !event.subreddit) return;
@@ -163,7 +166,7 @@ export async function handleAutoSuperuserPromotion(
             name: pointName,
             threshold: threshold.toString(),
             command: (settings[AppSetting.ModAwardCommand] as string) ?? "",
-        }
+        },
     );
 
     try {
@@ -195,7 +198,7 @@ export async function handleAutoSuperuserPromotion(
 
 export async function getCurrentScore(
     user: User,
-    context: TriggerContext
+    context: TriggerContext,
 ): Promise<ScoreResult | undefined> {
     if (!context.subredditName) {
         logger.error("❌ Subreddit name is not available in context.");
@@ -206,7 +209,7 @@ export async function getCurrentScore(
 
     const scoreFromRedis = await context.redis.zScore(
         POINTS_STORE_KEY,
-        user.username
+        user.username,
     );
 
     const rank = await context.redis.zRank(POINTS_STORE_KEY, user.username);

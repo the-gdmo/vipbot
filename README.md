@@ -20,8 +20,7 @@ Users can earn XP from activities such as:
 
 * Posting
 * Commenting
-* Receiving awards
-* Other configurable community activities
+* (Potentially in the future) Other configurable community activities
 
 Users progress through multiple levels as they accumulate XP.
 
@@ -492,7 +491,8 @@ Moderators should therefore ensure they have any information they need before re
 * User flair may remain after the application is removed and may need to be manually restored.
 * Automatic features only operate while the relevant VIPBot setting is enabled.
 * The bot should not be considered a replacement for Reddit's native moderation tools.
-* Communities should test configuration changes before deploying them to a production subreddit.
+* Communities should test configuration changes before deploying them to an actual subreddit.
+* The bot will increment it's own score any time it comments if the ""
 
 ---
 
@@ -636,6 +636,3 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 * Import [RepBot](https://github.com/the-gdmo/TheRepBot) code
 * Create VIPBot
 * Upload app image
-
-
-

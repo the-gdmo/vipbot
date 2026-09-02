@@ -14,7 +14,136 @@
 import { TriggerContext } from "@devvit/public-api";
 import { AppSetting } from "../config/settings";
 import { logger } from "../utils/logger";
-import { USER_STORE_KEY } from "../config/constants";
+
+/*
+ * Get the user's rank/title from LevelThresholds.
+ *
+ * Format:
+ * 1|0|Newcomer
+ * 2|100|Supporter
+ * 3|500|Bronze
+ * 4|1500|Silver
+ * 5|5000|Gold
+ * 6|15000|Diamond
+ * 7|50000|Elite
+ * 8|100000|Platinum
+ * 9|200000|Champion
+ * 10|300000|Legend
+ * 11|500000|Mythic
+ * 12|1000000|A League Of Their Own
+ */
+
+export async function getRankFromScore(
+    context: TriggerContext,
+    user: string,
+    score: number,
+): Promise<string> {
+    const settings = await context.settings.getAll();
+
+    const levelThresholds = settings[AppSetting.LevelThresholds];
+
+    if (typeof levelThresholds !== "string" || !levelThresholds.trim()) {
+        return "Newcomer";
+    }
+
+    const thresholds: Array<{
+        level: number;
+        points: number;
+        rankName: string;
+    }> = [];
+
+    for (const line of levelThresholds.split(/\r?\n/)) {
+        const trimmedLine = line.trim();
+
+        // Ignore empty lines.
+        if (!trimmedLine) {
+            continue;
+        }
+
+        const split = trimmedLine.split("|").map((value) => value.trim());
+
+        if (split.length < 3) {
+            logger.warn("⚠️ Invalid level threshold format", {
+                line: trimmedLine,
+            });
+            continue;
+        }
+
+        const level = Number(split[0]);
+        const points = Number(split[1]);
+        const rankName = split.slice(2).join("|").trim();
+
+        logger.info(`Checking array split values for getRankFromScore()`, {
+            rankName,
+            splitArr2: split[2],
+        });
+        if (!Number.isInteger(level) || !Number.isFinite(points) || !rankName) {
+            logger.warn("⚠️ Invalid level threshold values", {
+                line: trimmedLine,
+            });
+            continue;
+        }
+
+        thresholds.push({
+            level,
+            points,
+            rankName,
+        });
+    }
+
+    /*
+     * If no valid thresholds were found, default to the
+     * rank associated with level 1.
+     */
+    if (thresholds.length === 0) {
+        return "Newcomer";
+    }
+
+    /*
+     * Sort thresholds from lowest points to highest points.
+     */
+    thresholds.sort((a, b) => a.points - b.points);
+
+    /*
+     * Find the highest rank whose required points
+     * are less than or equal to the user's score.
+     */
+    let rankName = thresholds[0]?.rankName ?? "Newcomer";
+
+    for (const threshold of thresholds) {
+        if (score >= threshold.points) {
+            rankName = threshold.rankName;
+        } else {
+            break;
+        }
+    }
+
+    logger.debug("🏆 Calculated user rank", {
+        user,
+        score,
+        rank: rankName,
+    });
+
+    return rankName;
+}
+
+/*
+ * Get the user's level from LevelThresholds.
+ *
+ * Format:
+ * 1|0|Newcomer
+ * 2|100|Supporter
+ * 3|500|Bronze
+ * 4|1500|Silver
+ * 5|5000|Gold
+ * 6|15000|Diamond
+ * 7|50000|Elite
+ * 8|100000|Platinum
+ * 9|200000|Champion
+ * 10|300000|Legend
+ * 11|500000|Mythic
+ * 12|1000000|A League Of Their Own
+ */
 
 export async function getLevelFromScore(
     context: TriggerContext,
@@ -32,7 +161,6 @@ export async function getLevelFromScore(
     const thresholds: Array<{
         level: number;
         points: number;
-        rank: string;
     }> = [];
 
     for (const line of levelThresholds.split(/\r?\n/)) {
@@ -45,33 +173,14 @@ export async function getLevelFromScore(
 
         const split = trimmedLine.split("|").map((value) => value.trim());
 
-        if (split.length !== 3) {
+        if (split.length < 3) {
             logger.warn("⚠️ Invalid level threshold format", {
                 line: trimmedLine,
-                parts: split,
-                partCount: split.length,
             });
             continue;
         }
 
         const level = Number(split[0]);
-        const xpRequired = Number(split[1]);
-        const title = split[2];
-
-        if (
-            !Number.isInteger(level) ||
-            !title ||
-            !Number.isFinite(xpRequired)
-        ) {
-            logger.warn("⚠️ Invalid level threshold values", {
-                line: trimmedLine,
-                level: split[0],
-                title: split[1],
-                xpRequired: split[2],
-            });
-            continue;
-        }
-
         const points = Number(split[1]);
 
         if (!Number.isInteger(level) || !Number.isFinite(points)) {
@@ -84,7 +193,6 @@ export async function getLevelFromScore(
         thresholds.push({
             level,
             points,
-            rank: title,
         });
     }
 
@@ -123,27 +231,13 @@ export async function getLevelFromScore(
     return level;
 }
 
-//todo: make this work
-export async function getXpRequiredForNextRank(): Promise<Number> {
-    let xpRequiredForNextRank = 0;
-
-    return xpRequiredForNextRank;
-}
-
-//todo: make this work
-export async function getTitleFromScore(): Promise<string> {
-    let title = "";
-
-    return title;
-}
 export async function incrementLevel(
     context: TriggerContext,
     user: string,
-    currentScore: number,
+    score: number,
     increment: number,
-): Promise<string | undefined> {
-    const level = await getLevelFromScore(context, user, currentScore);
-    const increase = level + increment;
-    context.redis.set(`${USER_STORE_KEY}`, increase.toString());
-    return context.redis.get(`${USER_STORE_KEY}:${user}`);
+): Promise<number> {
+    const level = await getLevelFromScore(context, user, score);
+
+    return level + increment;
 }

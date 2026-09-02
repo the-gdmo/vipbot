@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 export function formatFlair(
     template: string,
-    placeholders: Record<string, string>
+    placeholders: Record<string, string>,
 ): string {
     let result = template;
     for (const [key, value] of Object.entries(placeholders)) {
@@ -24,7 +24,7 @@ export function formatFlair(
 export function formatMessage(
     event: CommentSubmit | CommentUpdate | PostSubmit,
     template: string,
-    placeholders: Record<string, string>
+    placeholders: Record<string, string>,
 ): string {
     if (!event.subreddit) return "";
     let result = template;

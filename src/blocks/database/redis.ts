@@ -3,6 +3,8 @@ import { Comment, TriggerContext, User } from "@devvit/public-api";
 import { getTriggers } from "../utils/common-utils";
 import { logger } from "../utils/logger";
 
+export const POINTS_STORE_KEY = `thanksPointsStore`;
+
 //------------------------
 // LastValidPostTitle
 //------------------------
@@ -247,7 +249,7 @@ export async function getModDupKey(
         return "";
     }
     if (!parentComment) {
-        logger.warn("❌ Parent comment not found.");
+        logger.warn("❌ Parent comment not found for getModDupKey()");
         return "";
     }
     return `modAward:${parentComment.id}:${event.post.id}:${event.subreddit.name}`;
