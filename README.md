@@ -86,10 +86,10 @@ Coins can be used for community features such as:
 * Other configurable features
 
 Users can check their balance using:
-`!balance`
+`/balance`
 
 Users can give coins to another member using:
-`!gift u/username amount`
+`/gift u/username amount`
 
 The maximum gift amount can be configured by subreddit moderators.
 
@@ -132,7 +132,7 @@ Streak milestones can unlock achievements.
 
 Users can check their current streak with:
 
-`!streak`
+`/streak`
 
 ---
 
@@ -170,7 +170,7 @@ Examples include:
 
 Users can view their achievements using:
 
-`!achievements`
+`/achievements`
 
 ---
 
@@ -179,7 +179,7 @@ Users can view their achievements using:
 Communities can allow users to nominate other members for VIP recognition.
 
 For example:
-`!nominate u/example`
+`/nominate u/example`
 
 Nominations can increase the recipient's community reputation and contribute toward nomination achievements.
 This allows VIP status to represent more than simply accumulating XP.
@@ -208,15 +208,15 @@ Supported leaderboards include:
 * Monthly XP
 
 Users can view a leaderboard with:
-`!leaderboard`
+`/leaderboard`
 
 Specific leaderboards can also be requested:
-`!leaderboard weeklyxp`
-`!leaderboard monthlyxp`
-`!leaderboard coins`
-`!leaderboard rep`
-`!leaderboard level`
-`!leaderboard streak`
+`/leaderboard weeklyxp`
+`/leaderboard monthlyxp`
+`/leaderboard coins`
+`/leaderboard rep`
+`/leaderboard level`
+`/leaderboard streak`
 
 
 Leaderboards can be configured to display a specified number of users.
@@ -284,19 +284,19 @@ Moderators have access to administrative commands for managing the system.
 
 Available moderator commands include:
 
-`!vipadd u/username`: Grant VIP status to a user.
+`/vipadd u/username`: Grant VIP status to a user.
 
-`!vipadd u/username 30`: Grant VIP status for a specified number of days.
+`/vipadd u/username 30`: Grant VIP status for a specified number of days.
 
-`!vipremove u/username`: Remove VIP status.
+`/vipremove u/username`: Remove VIP status.
 
-`!addxp u/username amount`: Add or remove XP.
+`/addxp u/username amount`: Add or remove XP.
 
-`!addcoins u/username amount`: Add or remove coins.
+`/addcoins u/username amount`: Add or remove coins.
 
-`!addrep u/username amount`: Add or remove reputation.
+`/addrep u/username amount`: Add or remove reputation.
 
-`!setlevel u/username level`: Set a user's level.
+`/setlevel u/username level`: Set a user's level.
 
 Moderator actions can also be recorded in the VIPBot audit system.
 
@@ -353,7 +353,7 @@ VIPBot is designed around the idea that different types of participation should 
 
 ## Commands
 
-The default command prefix is `!`.
+The default command prefix is `/`.
 
 The command prefix can be changed through the app settings.
 
@@ -361,32 +361,32 @@ The command prefix can be changed through the app settings.
 
 | Command                   | Description                        |
 | ------------------------- | ---------------------------------- |
-| `!help`                   | Display available commands         |
-| `!vip`                    | Display your VIPBot profile       |
-| `!rank`                   | Display your XP rank               |
-| `!rank u/username`        | Display another user's rank        |
-| `!balance`                | Display your coin balance          |
-| `!achievements`           | Display your achievements          |
-| `!leaderboard`            | Display the XP leaderboard         |
-| `!leaderboard xp`         | Display the XP leaderboard         |
-| `!leaderboard coins`      | Display the coin leaderboard       |
-| `!leaderboard rep`        | Display the reputation leaderboard |
-| `!streak`                 | Display your activity streak       |
-| `!vips`                   | Display current VIPs               |
-| `!nominate u/username`    | Nominate another user              |
-| `!gift u/username amount` | Give another user coins            |
+| `/help`                   | Display available commands         |
+| `/vip`                    | Display your VIPBot profile       |
+| `/rank`                   | Display your XP rank               |
+| `/rank u/username`        | Display another user's rank        |
+| `/balance`                | Display your coin balance          |
+| `/achievements`           | Display your achievements          |
+| `/leaderboard`            | Display the XP leaderboard         |
+| `/leaderboard xp`         | Display the XP leaderboard         |
+| `/leaderboard coins`      | Display the coin leaderboard       |
+| `/leaderboard rep`        | Display the reputation leaderboard |
+| `/streak`                 | Display your activity streak       |
+| `/vips`                   | Display current VIPs               |
+| `/nominate u/username`    | Nominate another user              |
+| `/gift u/username amount` | Give another user coins            |
 
 ### Moderator Commands
 
 | Command                       | Description                        |
 | ----------------------------- | ---------------------------------- |
-| `!vipadd u/username`          | Grant VIP                          |
-| `!vipadd u/username <days>`     | Grant VIP for a specified duration |
-| `!vipremove u/username`       | Remove VIP                         |
-| `!addxp u/username <amount>`    | Modify XP                          |
-| `!addcoins u/username <amount>` | Modify coins                       |
-| `!addrep u/username <amount>`   | Modify reputation                  |
-| `!setlevel u/username <level>`  | Set a user's level                 |
+| `/vipadd u/username`          | Grant VIP                          |
+| `/vipadd u/username <days>`     | Grant VIP for a specified duration |
+| `/vipremove u/username`       | Remove VIP                         |
+| `/addxp u/username <amount>`    | Modify XP                          |
+| `/addcoins u/username <amount>` | Modify coins                       |
+| `/addrep u/username <amount>`   | Modify reputation                  |
+| `/setlevel u/username <level>`  | Set a user's level                 |
 
 ---
 
