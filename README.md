@@ -359,22 +359,23 @@ The command prefix can be changed through the app settings.
 
 ### User Commands
 
-| Command                   | Description                        |
-| ------------------------- | ---------------------------------- |
-| `/help`                   | Display available commands         |
-| `/vip`                    | Display your VIPBot profile       |
-| `/rank`                   | Display your XP rank               |
-| `/rank u/username`        | Display another user's rank        |
-| `/balance`                | Display your coin balance          |
-| `/achievements`           | Display your achievements          |
-| `/leaderboard`            | Display the XP leaderboard         |
-| `/leaderboard xp`         | Display the XP leaderboard         |
-| `/leaderboard coins`      | Display the coin leaderboard       |
-| `/leaderboard rep`        | Display the reputation leaderboard |
-| `/streak`                 | Display your activity streak       |
-| `/vips`                   | Display current VIPs               |
-| `/nominate u/username`    | Nominate another user              |
-| `/gift u/username amount` | Give another user coins            |
+| Command                   | Description                                 |
+| ------------------------- | ------------------------------------------- |
+| `/info`                   | Display an explanation of how the bot works |
+| `/help`                   | Display available commands                  |
+| `/vip`                    | Display your VIPBot profile                 |
+| `/rank`                   | Display your XP rank                        |
+| `/rank u/username`        | Display another user's rank                 |
+| `/balance`                | Display your coin balance                   |
+| `/achievements`           | Display your achievements                   |
+| `/leaderboard`            | Display the XP leaderboard                  |
+| `/leaderboard xp`         | Display the XP leaderboard                  |
+| `/leaderboard coins`      | Display the coin leaderboard                |
+| `/leaderboard rep`        | Display the reputation leaderboard          |
+| `/streak`                 | Display your activity streak                |
+| `/vips`                   | Display current VIPs                        |
+| `/nominate u/username`    | Nominate another user                       |
+| `/gift u/username amount` | Give another user coins                     |
 
 ### Moderator Commands
 
@@ -400,6 +401,7 @@ NOTE: All placeholders are case-insensitive.
 
 ### User Information
 
+* `inquirer`: The username of the Redditor trying to understand how to use the bot (no `u/`).
 * `username`: The user's Reddit username without `u/`.
 * `author`: The username of the author of a post or comment.
 * `subreddit`: The subreddit name without `r/`.
