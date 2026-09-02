@@ -10,7 +10,7 @@ The app is highly configurable, so each subreddit can choose which features it w
 
 ---
 
-## NOTE: Not necessarily all features actually exist at the time of upload of this bot.
+# NOTE: Not all features may actually exist at time of upload.
 
 ## Features
 
@@ -631,10 +631,6 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 * Bring the bot into an up-and-running state
 * List all placeholders in the README
 * Update README to list all features that exist currently
-### 0.0.2
-* Simplify README as much as possible
-* Change messaging logic to link to my developer instead of a separate subreddit
-### 0.0.1
 * Import [RepBot](https://github.com/the-gdmo/TheRepBot) code
 * Create VIPBot
 * Upload app image
