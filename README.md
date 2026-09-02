@@ -10,6 +10,8 @@ The app is highly configurable, so each subreddit can choose which features it w
 
 ---
 
+## NOTE: Not necessarily all features actually exist at the time of upload of this bot.
+
 ## Features
 
 ### ⭐ XP & Levels
