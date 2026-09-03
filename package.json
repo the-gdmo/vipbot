@@ -64,6 +64,6 @@
   },
   "devDependencies": {
     "@types/json2md": "^1.5.4",
-    "@types/semver": "^7.7.1"
+    "@types/semver": "^7.8.0"
   }
 }
