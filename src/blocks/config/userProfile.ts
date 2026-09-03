@@ -9,15 +9,48 @@ export class UserProfile {
 
     async setVipPoints(value: number): Promise<void> {
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
+
         await this.context.redis.set(userVipPointsKey, value.toString());
     }
 
     async getVipPoints(): Promise<number> {
-        //| **VIP Points** | 1,247 |
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
         const points = await this.context.redis.get(userVipPointsKey);
 
         return points ? Number(points) : 0;
+    }
+
+    async setSubRank(value: number): Promise<void> {
+        const key = `userProfile:${this.user.username}:subRank`;
+
+        await this.context.redis.set(key, value.toString());
+    }
+
+    async getSubRank(): Promise<number> {
+        const key = `userProfile:${this.user.username}:subRank`;
+        const rank = await this.context.redis.get(key);
+
+        return rank ? Number(rank) : 0;
+    }
+
+    async setReputation(value: {
+        vipPoints: number;
+        subredditRank: number;
+        vipPointsGiven: number;
+        vipPointsReceived: number;
+        currentLevel: number;
+        nextLevel: number;
+        xpToNextLevel: number;
+    }): Promise<void> {
+        await Promise.all([
+            this.setVipPoints(value.vipPoints),
+            this.setSubRank(value.subredditRank),
+            this.setVipPointsGiven(value.vipPointsGiven),
+            this.setVipPointsReceived(value.vipPointsReceived),
+            this.setCurrentUserLevel(value.currentLevel),
+            this.setNextUserLevel(value.nextLevel),
+            this.setXpToNextLevel(value.xpToNextLevel),
+        ]);
     }
 
     async getReputation() {
@@ -31,7 +64,7 @@ export class UserProfile {
             xpToNextLevel,
         ] = await Promise.all([
             this.getVipPoints(),
-            this.getSubredditRank(),
+            this.getSubRank(),
             this.getVipPointsGiven(),
             this.getVipPointsReceived(),
             this.getCurrentUserLevel(),
@@ -48,6 +81,20 @@ export class UserProfile {
             nextLevel,
             xpToNextLevel,
         };
+    }
+
+    async setProgress(value: {
+        currentLevel: number;
+        vipPoints: number;
+        nextLevel: number;
+        xpToNextLevel: number;
+    }): Promise<void> {
+        await Promise.all([
+            this.setCurrentUserLevel(value.currentLevel),
+            this.setVipPoints(value.vipPoints),
+            this.setNextUserLevel(value.nextLevel),
+            this.setXpToNextLevel(value.xpToNextLevel),
+        ]);
     }
 
     async getProgress() {
@@ -67,59 +114,173 @@ export class UserProfile {
         };
     }
 
-    async getAchievements() {
-        return [];
+    async setAchievements(value: string[]): Promise<void> {
+        const key = `userProfile:${this.user.username}:achievements`;
+
+        await this.context.redis.set(key, JSON.stringify(value));
     }
 
-    async getRecentAwards() {
-        return [];
+    async getAchievements(): Promise<string[]> {
+        const key = `userProfile:${this.user.username}:achievements`;
+        const achievements = await this.context.redis.get(key);
+
+        if (!achievements) {
+            return [];
+        }
+
+        try {
+            return JSON.parse(achievements) as string[];
+        } catch {
+            return [];
+        }
+    }
+
+    async setRecentAwards(
+        value: {
+            date: string;
+            awardedBy: string;
+            points: number;
+        }[]
+    ): Promise<void> {
+        const key = `userProfile:${this.user.username}:recentAwards`;
+
+        await this.context.redis.set(key, JSON.stringify(value));
+    }
+
+    async getRecentAwards(): Promise<
+        {
+            date: string;
+            awardedBy: string;
+            points: number;
+        }[]
+    > {
+        const key = `userProfile:${this.user.username}:recentAwards`;
+        const awards = await this.context.redis.get(key);
+
+        if (!awards) {
+            return [];
+        }
+
+        try {
+            return JSON.parse(awards) as {
+                date: string;
+                awardedBy: string;
+                points: number;
+            }[];
+        } catch {
+            return [];
+        }
+    }
+
+    async setPointHistory(value: {
+        today: number;
+        thisWeek: number;
+        thisMonth: number;
+        thisYear: number;
+        allTime: number;
+    }): Promise<void> {
+        const key = `userProfile:${this.user.username}:pointHistory`;
+
+        await this.context.redis.set(key, JSON.stringify(value));
     }
 
     async getPointHistory() {
-        return {
-            today: 0,
-            thisWeek: 0,
-            thisMonth: 0,
-            thisYear: 0,
-            allTime: await this.getVipPoints(),
-        };
+        const key = `userProfile:${this.user.username}:pointHistory`;
+        const history = await this.context.redis.get(key);
+
+        if (!history) {
+            return {
+                today: 0,
+                thisWeek: 0,
+                thisMonth: 0,
+                thisYear: 0,
+                allTime: await this.getVipPoints(),
+            };
+        }
+
+        try {
+            return JSON.parse(history) as {
+                today: number;
+                thisWeek: number;
+                thisMonth: number;
+                thisYear: number;
+                allTime: number;
+            };
+        } catch {
+            return {
+                today: 0,
+                thisWeek: 0,
+                thisMonth: 0,
+                thisYear: 0,
+                allTime: await this.getVipPoints(),
+            };
+        }
     }
 
-    private async getSubredditRank() {
-        // TODO: Implement subreddit rank lookup.
-        //| **Subreddit Rank** | #12 |
-        return 0;
+    async setVipPointsReceived(value: number): Promise<void> {
+        const key = `userProfile:${this.user.username}:vipPointsReceived`;
+
+        await this.context.redis.set(key, value.toString());
     }
 
-    private async getVipPointsReceived() {
-        // TODO: Implement VIP points received lookup.
-        //| **VIP Points Received** | 386 |
-        return 0;
+    async getVipPointsReceived(): Promise<number> {
+        const key = `userProfile:${this.user.username}:vipPointsReceived`;
+        const value = await this.context.redis.get(key);
+
+        return value ? Number(value) : 0;
     }
 
-    private async getVipPointsGiven() {
-        // TODO: Implement VIP points given lookup.
-        //| **VIP Points Given** | 386 |
+    async setVipPointsGiven(value: number): Promise<void> {
+        const key = `userProfile:${this.user.username}:vipPointsGiven`;
 
-        return 0;
+        await this.context.redis.set(key, value.toString());
     }
 
-    private async getCurrentUserLevel() {
-        // TODO: Implement current level lookup.
-        //| **Current Level** | 13 |
+    async getVipPointsGiven(): Promise<number> {
+        const key = `userProfile:${this.user.username}:vipPointsGiven`;
+        const value = await this.context.redis.get(key);
 
-        return 0;
+        return value ? Number(value) : 0;
     }
 
-    private async getNextUserLevel() {
-        // TODO: Implement next level lookup.
-        //| **Next Level** | 14 |
-        return 0;
+    async setCurrentUserLevel(value: number): Promise<void> {
+        const key = `userProfile:${this.user.username}:currentLevel`;
+
+        await this.context.redis.set(key, value.toString());
     }
 
-    private async getXpToNextLevel() {
-        // TODO: Implement XP-to-next-level lookup.
-        //| **XP To Next Level** | 100 |
-        return 0;
+    async getCurrentUserLevel(): Promise<number> {
+        const key = `userProfile:${this.user.username}:currentLevel`;
+        const value = await this.context.redis.get(key);
+
+        return value ? Number(value) : 0;
+    }
+
+    async setNextUserLevel(value: number): Promise<number> {
+        const key = `userProfile:${this.user.username}:nextLevel`;
+
+        await this.context.redis.set(key, value.toString());
+
+        return value;
+    }
+
+    async getNextUserLevel(): Promise<number> {
+        const key = `userProfile:${this.user.username}:nextLevel`;
+        const value = await this.context.redis.get(key);
+
+        return value ? Number(value) : 0;
+    }
+
+    async setXpToNextLevel(value: number): Promise<void> {
+        const key = `userProfile:${this.user.username}:xpToNextLevel`;
+
+        await this.context.redis.set(key, value.toString());
+    }
+
+    async getXpToNextLevel(): Promise<number> {
+        const key = `userProfile:${this.user.username}:xpToNextLevel`;
+        const value = await this.context.redis.get(key);
+
+        return value ? Number(value) : 0;
     }
 }
