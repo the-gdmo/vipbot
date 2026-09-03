@@ -74,9 +74,9 @@ export enum AppSetting {
     CommentIncrement = "commentIncrement",
     NewPostMessage = "newPostMessage",
     InfoMessageConfirmation = "infoMessageConfirmation",
-    DMInfoMessage = "dmInfoMessage",
+    DMInfoMessage = "DMInfoMessage",
     HelpMessageConfirmation = "helpMessageConfirmation",
-
+    DMHelpMessage = "DMHelpMessage",
 }
 
 export enum TemplateDefaults {
@@ -115,10 +115,22 @@ export enum TemplateDefaults {
         "{awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
     ModsAndPostAuthorDisallowedMessage = "Only moderators and Post Authors (OPs) can award {name}s.",
     UserPointsInitializedMessage = "Your {name} points have been initialized to 1. [Message the mods]({modmailLink}) if you have any questions.",
-    NewPostMessage = "Hello. To all commentors/OP, if this is your first time experiencing u/vipbot2, use `{prefix}info` to get information in your dms about how to use this bot.",
-    DMInfoMessage = "Hey u/{username}! I see you are curious as to how to use me in r/{subreddit}.\n\n" +
+    NewPostMessage = "Hello.\n\nTo all commentors/OP, if this is your first time experiencing u/vipbot2, " +
+        "use `{prefix}info` to get information in your dms about how to use this bot.\n\n***NOTE: All commands are case-insensitive.***",
+    DMInfoMessage = "Hey u/{username}!\n\nI see you are curious as to how to use me in r/{subreddit}.\n\n" +
         "Please use the `{prefix}help` command on [the post you used this on]({permalink}) to get another message listing all usable bot commands.",
     InfoMessageConfirmation = "I just sent you a dm with all the info about the bot itself.",
+    NormalUserDMHelpMessage = "The commands available to you are:\n\n`{prefix}info`\n\n" +
+        "`{prefix}help`\n\n`{prefix}profile`\n\n`{prefix}rank [u/<username>]`\n\n`{prefix}balance`\n\n" +
+        "`{prefix}achievements`\n\n`{prefix}leaderboard [xp|coins|rep]`\n\n`{prefix}streak`\n\n`{prefix}vips`\n\n" +
+        "`{prefix}nominate u/<username>`\n\nand\n`{prefix}gift u/<username> <amount>`",
+    NormalUserHelpMessageConfirmation = "I just sent you a dm with all the info about the commands that you have access to with me.",
+    ModDMHelpMessage = "The commands available to you are:\n\n`{prefix}info`\n\n" +
+        "`{prefix}help`\n\n`{prefix}profile`\n\n`{prefix}rank [u/<username>]`\n\n`{prefix}balance`\n\n" +
+        "`{prefix}achievements`\n\n`{prefix}leaderboard [xp|coins|rep]`\n\n`{prefix}streak`\n\n`{prefix}vips`\n\n" +
+        "`{prefix}nominate u/<username>`\n\n`{prefix}gift u/<username> <amount>`\n\n`{prefix}vipadd u/<username> [days]`\n\n" +
+        "`{prefix}vipremove u/<username>`\n\n`{prefix}setxp u/<username> <amount>`\n\n`{prefix}setcoins u/<username> <amount>`\n\n" +
+        "`{prefix}setrep u/<username> <amount>`\n\nand\n\n`{prefix}setlevel u/<username> <level>`",
     HelpMessageConfirmation = "I just sent you a dm with all the info about the commands that you have access to with me.",
 }
 
@@ -943,22 +955,6 @@ export const appSettings: SettingsFormField[] = [
         type: "group",
         label: "Notification Settings",
         fields: [
-            {
-                type: "paragraph",
-                name: AppSetting.InfoMessageConfirmation,
-                label: "Info Message Confirmation Message",
-                helpText: "Message sent to visibly display to users that the info message was sent to them",
-                defaultValue: TemplateDefaults.InfoMessageConfirmation,
-                onValidate: stringOrParagraphFieldContainsText,
-            },
-            {
-                type: "paragraph",
-                name: AppSetting.HelpMessageConfirmation,
-                label: "Help Message Confirmation Message",
-                helpText: "Message sent to visibly display to users that the help message was sent to them",
-                defaultValue: TemplateDefaults.HelpMessageConfirmation,
-                onValidate: stringOrParagraphFieldContainsText,
-            },
             {
                 type: "paragraph",
                 name: AppSetting.NewPostMessage,

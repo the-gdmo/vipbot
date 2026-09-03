@@ -1,5 +1,5 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
-import { TriggerContext, User } from "@devvit/public-api";
+import { Comment, TriggerContext, User } from "@devvit/public-api";
 import {
     AppSetting,
     AutoSuperuserReplyOptions,
@@ -7,127 +7,12 @@ import {
 } from "./settings";
 import { formatMessage } from "../utils/formatting";
 import { logger } from "../utils/logger";
-import { POINTS_STORE_KEY } from "./constants";
-import { getParentComment, ScoreResult } from "../utils/common-utils";
-
-export const isModerator = async (
-    context: TriggerContext,
-    subName: string,
-    awarder: string,
-) => {
-    const filteredModeratorList = await context.reddit
-        .getModerators({ subredditName: subName, username: awarder })
-        .all();
-    return filteredModeratorList.length > 0;
-};
-
-export async function getUserCanAward(
-    context: TriggerContext,
-    awarder: string,
-) {
-    // UsersWhoCannotAwardPoints
-    const settings = await context.settings.getAll();
-
-    const usersWhoCannotAwardSetting =
-        (settings[AppSetting.UsersWhoCannotAwardPoints] as
-            | string
-            | undefined) ?? "";
-    const UsersWhoCannotAwardPoints = usersWhoCannotAwardSetting
-        .split(",")
-        .map((user) => user.trim().toLowerCase());
-
-    if (UsersWhoCannotAwardPoints.includes(awarder.toLowerCase())) {
-        return false;
-    }
-
-    return true;
-}
-
-export async function getUserIsSuperuser(
-    context: TriggerContext,
-    awarder: string,
-) {
-    const settings = await context.settings.getAll();
-
-    const VIPUserSetting =
-        (settings[AppSetting.VIPUsers] as string | undefined) ?? "";
-    const VIPUsers = VIPUserSetting.split(",").map((user) =>
-        user.trim().toLowerCase(),
-    );
-
-    if (VIPUsers.includes(awarder.toLowerCase())) {
-        return true;
-    }
-
-    const autoSuperuserThreshold =
-        (settings[AppSetting.AutoSuperuserThreshold] as number | undefined) ??
-        0;
-
-    if (autoSuperuserThreshold) {
-        let user: User | undefined;
-        try {
-            user = await context.reddit.getUserByUsername(awarder);
-        } catch {
-            return false;
-        }
-        if (!user) {
-            return false;
-        }
-        const currentScore = await getCurrentScore(user, context);
-        if (!currentScore) {
-            return false;
-        }
-        return currentScore.score >= autoSuperuserThreshold;
-    } else {
-        return false;
-    }
-}
-export class CommentTriggerContext {
-    private _awarder: string | undefined = undefined;
-    private _subredditName: string | undefined = undefined;
-    private _isMod: boolean = false;
-    private _isSuperUser: boolean = false;
-    private _userCanAward: boolean = false;
-    // More properties...
-
-    get userCanAward() {
-        return this._userCanAward;
-    }
-    get awarder() {
-        return this._awarder;
-    }
-    get isMod() {
-        return this._isMod;
-    }
-    get isSuperUser() {
-        return this._isSuperUser;
-    }
-    // More getters where needed...
-
-    public async init(
-        event: CommentSubmit | CommentUpdate,
-        context: TriggerContext,
-    ) {
-        if (!event.author) return;
-        if (!event.subreddit) return;
-        this._awarder = event.author.name;
-        this._subredditName = event.subreddit.name;
-        this._isMod = await isModerator(
-            context,
-            this._subredditName,
-            this._awarder,
-        );
-        this._isSuperUser = await getUserIsSuperuser(context, this._awarder);
-        this._userCanAward = await getUserCanAward(context, this._awarder);
-        // More context setup
-    }
-}
+import { getCurrentScore } from "../utils/common-utils";
 
 export async function handleAutoSuperuserPromotion(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     newScore: number,
-    _commandUsed: string,
 ) {
     const parentComment = await getParentComment(event, context);
     if (!event.author || !parentComment || !event.subreddit) return;
@@ -196,113 +81,180 @@ export async function handleAutoSuperuserPromotion(
     }
 }
 
-export async function getCurrentScore(
-    user: User,
+export const isModerator = async (
     context: TriggerContext,
-): Promise<ScoreResult | undefined> {
-    if (!context.subredditName) {
-        logger.error("❌ Subreddit name is not available in context.");
-        return;
-    }
+    subName: string,
+    awarder: string,
+) => {
+    const filteredModeratorList = await context.reddit
+        .getModerators({ subredditName: subName, username: awarder })
+        .all();
+    return filteredModeratorList.length > 0;
+};
 
-    const userFlair = await user.getUserFlairBySubreddit(context.subredditName);
+export async function getUserIsSuperuser(
+    context: TriggerContext,
+    awarder: string,
+) {
+    const settings = await context.settings.getAll();
 
-    const scoreFromRedis = await context.redis.zScore(
-        POINTS_STORE_KEY,
-        user.username,
+    const VIPUserSetting =
+        (settings[AppSetting.VIPUsers] as string | undefined) ?? "";
+    const superUsers = VIPUserSetting.split(",").map((user) =>
+        user.trim().toLowerCase(),
     );
 
-    const rank = await context.redis.zRank(POINTS_STORE_KEY, user.username);
-
-    const place = rank !== undefined && rank !== null ? rank + 1 : undefined;
-
-    logger.info("🔢 Values", {
-        place,
-        rank,
-        scoreFromRedis,
-        userHasFlair: userFlair?.flairText !== undefined,
-    });
-
-    let scoreFromFlair: number | undefined;
-    let flairIsNumber = false;
-
-    if (userFlair?.flairText) {
-        const flairTextTemplate =
-            ((await context.settings.get(AppSetting.FlairFormatting)) as
-                | string
-                | undefined) ?? TemplateDefaults.FlairFormatting;
-
-        const escapeRegex = (text: string): string =>
-            text.replaceAll(/[.*+?^${}()|[\]\\]/gi, "\\$&");
-
-        // Escape the template first.
-        let pattern = escapeRegex(flairTextTemplate);
-
-        // Replace placeholders with regex.
-        pattern = pattern.replaceAll(escapeRegex("{total}"), "(\\d+)");
-
-        pattern = pattern.replaceAll(escapeRegex("{symbol}"), ".*?");
-
-        pattern = pattern.replaceAll(escapeRegex("{place}"), "\\d+");
-
-        const regex = new RegExp(`^${pattern}$`);
-
-        const matches = regex.exec(userFlair.flairText);
-
-        const matchedPoints = matches?.[1];
-
-        scoreFromFlair = matchedPoints
-            ? parseInt(matchedPoints, 10)
-            : undefined;
-
-        logger.debug("Checking flair values", {
-            place,
-            flairText: userFlair.flairText,
-            flairTemplate: flairTextTemplate,
-            regex: regex.toString(),
-            matches,
-            matchedPoints,
-            scoreFromFlair,
-        });
-
-        // Fallback: extract the first number found anywhere.
-        if (scoreFromFlair === undefined) {
-            const fallbackRegex = /(\d+)/;
-            const fallbackMatches = fallbackRegex.exec(userFlair.flairText);
-
-            scoreFromFlair = fallbackMatches?.[1]
-                ? parseInt(fallbackMatches[1], 10)
-                : undefined;
-
-            logger.debug("Fallback flair parsing", {
-                fallbackMatches,
-                scoreFromFlair,
-            });
-        }
-
-        // We successfully parsed a score.
-        flairIsNumber = scoreFromFlair !== undefined;
+    if (superUsers.includes(awarder.toLowerCase())) {
+        return true;
     }
 
-    const finalScore = scoreFromFlair ?? scoreFromRedis ?? 0;
+    const autoSuperuserThreshold =
+        (settings[AppSetting.AutoSuperuserThreshold] as number | undefined) ??
+        0;
 
-    await context.redis.zAdd(POINTS_STORE_KEY, {
-        member: user.username,
-        score: finalScore,
-    });
+    if (autoSuperuserThreshold) {
+        let user: User | undefined;
+        try {
+            user = await context.reddit.getUserByUsername(awarder);
+        } catch {
+            return false;
+        }
+        if (!user) {
+            return false;
+        }
+        const currentScore = await getCurrentScore(user, context);
+        if (!currentScore) {
+            return false;
+        }
+        return currentScore.score >= autoSuperuserThreshold;
+    } else {
+        return false;
+    }
+}
 
-    logger.info("🔢 Values", {
-        place,
-        score: finalScore,
-        scoreFromRedis,
-        scoreFromFlair,
-        userHasFlair: userFlair?.flairText !== undefined,
-        flairIsNumber,
-    });
+export async function userBecomesSuperUser(
+    event: CommentSubmit | CommentUpdate,
+    userScore: number,
+    context: TriggerContext,
+) {
+    if (!event.comment) return;
+    if (!event.author) return;
 
-    return {
-        score: finalScore,
-        userHasFlair: userFlair?.flairText !== undefined,
-        flairIsNumber,
-    };
+    const parentComment = await getParentComment(event, context);
+    if (!parentComment) return;
+
+    const recipient = parentComment.authorName;
+    const recipientUser = await context.reddit.getUserByUsername(recipient);
+    if (!recipientUser) return;
+
+    const settings = await context.settings.getAll();
+
+    const autoSuperuserThreshold =
+        (settings[AppSetting.AutoSuperuserThreshold] as number | undefined) ??
+        0;
+    const superUserCommand =
+        (settings[AppSetting.ModAwardCommand] as string) ?? "";
+    const notifyOnAutoSuperuserMode = ((settings[
+        AppSetting.NotifyOnAutoSuperuser
+    ] as string[] | undefined) ?? [
+        AutoSuperuserReplyOptions.NoReply,
+    ])[0] as AutoSuperuserReplyOptions;
+    if (
+        autoSuperuserThreshold &&
+        userScore === autoSuperuserThreshold &&
+        notifyOnAutoSuperuserMode !== AutoSuperuserReplyOptions.NoReply
+    ) {
+        console.log(
+            `${event.comment.id}: ${recipientUser.username} has reached the auto superuser threshold. Notifying.`,
+        );
+        (settings[AppSetting.AutoSuperuserTemplate] as string | undefined) ??
+            TemplateDefaults.NotifyOnSuperuserTemplate;
+        const autoSuperUserMessage = formatMessage(
+            event,
+            (settings[AppSetting.AutoSuperuserTemplate] as string) ??
+                TemplateDefaults.NotifyOnSuperuserTemplate,
+            {
+                awarder: event.author.name,
+                awardee: recipient,
+                threshold: autoSuperuserThreshold.toString(),
+                command: superUserCommand,
+            },
+        );
+
+        await _replyToUser(
+            context,
+            recipient,
+            autoSuperUserMessage,
+            parentComment.id,
+            notifyOnAutoSuperuserMode,
+        );
+    }
+}
+
+export async function _replyToUser(
+    context: TriggerContext,
+    toUserName: string,
+    messageBody: string,
+    commentId: string,
+    replyMode: string,
+) {
+    if (replyMode === "none") return;
+
+    if (replyMode === "replybypm") {
+        const subredditName =
+            context.subredditName ??
+            (await context.reddit.getCurrentSubredditName());
+        try {
+            await context.reddit.sendPrivateMessage({
+                subject: `Message from r/${subredditName}`,
+                text: messageBody,
+                to: toUserName,
+            });
+            console.log(`${commentId}: PM sent to ${toUserName}.`);
+        } catch {
+            console.log(
+                `${commentId}: Error sending PM to ${toUserName}. User may only allow PMs from whitelisted users.`,
+            );
+        }
+    } else if (replyMode === "replybycomment") {
+        const redisKey = `shouldComment:${commentId}`;
+        const parentCommentRespondedTo = await context.redis.exists(redisKey);
+
+        if (parentCommentRespondedTo) {
+            logger.info(`Response sent, returning.`);
+            return;
+        }
+
+        await context.redis.set(redisKey, "1");
+
+        const newComment = await context.reddit.submitComment({
+            id: commentId,
+            text: messageBody,
+        });
+        await Promise.all([newComment.distinguish()]);
+        console.log(
+            `${commentId}: Public comment reply left for ${toUserName}`,
+        );
+    } else {
+        console.warn(`${commentId}: Unknown replyMode "${replyMode}"`);
+    }
+}
+
+export async function getParentComment(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+): Promise<Comment | undefined> {
+    let parentComment: Comment | undefined;
+    if (!event.comment) return undefined;
+    try {
+        parentComment = await context.reddit.getCommentById(
+            event.comment.parentId,
+        );
+        return parentComment;
+    } catch {
+        parentComment = undefined;
+    }
+    if (!parentComment) {
+        return undefined;
+    }
 }

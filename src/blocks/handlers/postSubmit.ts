@@ -6,8 +6,8 @@ import {
     ScoreResult,
     setUserScoreOnPostSubmit,
 } from "../utils/common-utils";
-import { AppSetting } from "../config/settings";
-import { CommentTriggerContext } from "../config/commentTriggerContext";
+import { AppSetting, TemplateDefaults } from "../config/settings";
+import { formatMessage } from "../utils/formatting";
 
 /**
  * Handles newly submitted posts.
@@ -21,6 +21,22 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
     }
 
     const settings = await context.settings.getAll();
+    const prefix = (settings[AppSetting.CommandPrefix] as string) ?? "/";
+    const newPostMessage = formatMessage(
+        event,
+        (settings[AppSetting.NewPostMessage] as string) ??
+            TemplateDefaults.NewPostMessage,
+        { prefix },
+    );
+
+    const newPostComment = await context.reddit.submitComment({
+        id: event.post.id,
+        text: newPostMessage,
+    });
+
+    newPostComment.distinguish(true);
+    newPostComment.lock();
+
     const increment = (settings[AppSetting.PostIncrement] as number) ?? 0;
     const awarder = event.author.name;
     let originalPoster: User | undefined;
@@ -69,9 +85,6 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
     // ─────────────────────────────────────────────
     // Initialize context
     // ─────────────────────────────────────────────
-    const commentTriggerContext = new CommentTriggerContext();
-    await commentTriggerContext.init(event, context);
-
     const OP = event.author.name;
 
     let user: User | undefined;
@@ -110,5 +123,11 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         flairIsNumber: existingScore.flairIsNumber,
     };
 
-    await setUserScoreOnPostSubmit(event, context, user.username, newScore, settings);
+    await setUserScoreOnPostSubmit(
+        event,
+        context,
+        user.username,
+        newScore,
+        settings,
+    );
 }

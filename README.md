@@ -282,6 +282,8 @@ Flair functionality can be disabled if the subreddit does not want VIPBot to mod
 
 Moderators have access to administrative commands for managing the system.
 
+NOTE: The prefix of the command is dependent on your subreddit's settings.
+
 Available moderator commands include:
 
 `/vipadd u/username`: Grant VIP status to a user.
@@ -290,11 +292,11 @@ Available moderator commands include:
 
 `/vipremove u/username`: Remove VIP status.
 
-`/addxp u/username amount`: Add or remove XP.
+`/setxp u/username amount`: Set a user's XP.
 
-`/addcoins u/username amount`: Add or remove coins.
+`/setcoins u/username amount`: Set a user's coins.
 
-`/addrep u/username amount`: Add or remove reputation.
+`/setrep u/username amount`: Set a user's reputation.
 
 `/setlevel u/username level`: Set a user's level.
 
@@ -384,9 +386,9 @@ The command prefix can be changed through the app settings.
 | `/vipadd u/username`          | Grant VIP                          |
 | `/vipadd u/username <days>`     | Grant VIP for a specified duration |
 | `/vipremove u/username`       | Remove VIP                         |
-| `/addxp u/username <amount>`    | Modify XP                          |
-| `/addcoins u/username <amount>` | Modify coins                       |
-| `/addrep u/username <amount>`   | Modify reputation                  |
+| `/setxp u/username <amount>`    | Modify XP                          |
+| `/setcoins u/username <amount>` | Modify coins                       |
+| `/setrep u/username <amount>`   | Modify reputation                  |
 | `/setlevel u/username <level>`  | Set a user's level                 |
 
 ---

@@ -2,12 +2,12 @@ import {
     appSettings,
 } from "./config/settings";
 import { onPostSubmit } from "./handlers/postSubmit";
-import { onCommentSubmit } from "./handlers/commentSubmit";
 import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/installEvents";
 import { Devvit } from "@devvit/public-api";
 import { CLEANUP_JOB, UPDATE_MODINFO_JOB } from "./config/constants";
 import { cleanupDeletedAccounts } from "./jobs/cleanup";
 import { modInfoJob } from "./jobs/modInfo";
+import { onCommentSubmit } from "./handlers/commentSubmit";
 
 /**
  *
