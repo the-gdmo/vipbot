@@ -305,6 +305,7 @@ export async function replyToUser(
 export async function userHasPermission(
     event: CommentSubmit | CommentUpdate,
     awarderID: string,
+    awarderName: string,
     context: TriggerContext,
     settings: SettingsValues,
 ): Promise<boolean> {
@@ -375,7 +376,7 @@ export async function userHasPermission(
             (settings[msgKey] as string) ??
                 TemplateDefaults.ModOnlyDisallowedMessage,
             {
-                awarder: awarderID,
+                awarder: awarderName,
                 name: pointName,
             },
         );

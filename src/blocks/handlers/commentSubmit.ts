@@ -20,8 +20,6 @@ import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import {
-    getUserIsSuperuser,
-    handleAutoSuperuserPromotion,
     isModerator,
 } from "../config/commentTriggerContext";
 import { POINTS_STORE_KEY } from "../config/constants";
@@ -151,9 +149,9 @@ export async function onCommentSubmit(
         context.subredditName,
         user.username,
     );
-    const isSuperuser = await getUserIsSuperuser(context, user.username);
     const hasPermission = await userHasPermission(
         event,
+        user.id,
         user.username,
         context,
         settings,
@@ -262,6 +260,14 @@ export async function onCommentSubmit(
     let addCoinsCommand = false;
     let addRepCommand = false;
     let setLevelCommand = false;
+
+    if (!hasPermission) {
+        logger.debug("❌ User does not have permission to use commands", {
+            awarder,
+            commentId: event.comment.id,
+        });
+        return;
+    }
 
     if (bodySplit.length === 3) {
         const command = bodySplit[0];
@@ -1180,8 +1186,6 @@ export async function onCommentSubmit(
         currentScore,
         pointsKey: POINTS_STORE_KEY,
     });
-
-    await handleAutoSuperuserPromotion(event, context, currentScore);
 
     logger.info("🏁 Comment handler completed successfully", {
         commentId: event.comment.id,
