@@ -9,7 +9,6 @@ import { formatMessage } from "../utils/formatting";
 import {
     getCurrentScore,
     getParentComment,
-    InitialUserWikiOptions,
     ScoreResult,
     setUserScoreOnCommentSubmit,
     userHasPermission,
@@ -19,7 +18,7 @@ import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { isModerator } from "../config/commentTriggerContext";
-import { SafeWikiClient, updateUserWiki } from "../jobs/leaderboard";
+import { executeHelpCommand, executeInfoCommand, executeProfileCommand } from "../config/commandExecutors";
 
 /**
  * Handles newly submitted comments.
@@ -433,97 +432,6 @@ export async function onCommentSubmit(
     }
 
     // ============================================================
-    // AWARD POINT
-    // ============================================================
-
-    logger.info("🎁 Point award beginning", {
-        awarder,
-        recipient,
-        increment,
-        pointName,
-        key,
-    });
-
-    await context.redis.set(key, "1");
-
-    logger.debug("🔐 Duplicate-award key created", {
-        key,
-    });
-
-    // ============================================================
-    // USER WIKI
-    // ============================================================
-
-    try {
-        logger.info("📘 Updating user wiki pages", {
-            awarder,
-            recipient,
-            subreddit: event.subreddit.name,
-        });
-
-        const subredditName = event.subreddit.name;
-
-        const safeWiki = new SafeWikiClient(context.reddit);
-
-        const awarderWiki = await safeWiki.getWikiPage(
-            subredditName,
-            `user/${awarder.toLowerCase()}`
-        );
-
-        const recipientWiki = await safeWiki.getWikiPage(
-            subredditName,
-            `user/${recipient}`
-        );
-
-        logger.debug("📄 User wiki lookup results", {
-            awarderWikiExists: !!awarderWiki,
-            recipientWikiExists: !!recipientWiki,
-        });
-
-        if (!awarderWiki) {
-            logger.info("📝 Creating awarder wiki page", {
-                awarder,
-            });
-
-            await InitialUserWikiOptions(context, awarder);
-        }
-
-        if (!recipientWiki) {
-            logger.info("📝 Creating recipient wiki page", {
-                recipient,
-            });
-
-            await InitialUserWikiOptions(context, recipient);
-        }
-
-        const givenData = {
-            postTitle: event.post.title,
-            postUrl: event.post.permalink,
-            recipient,
-            commentUrl: event.comment.permalink,
-        };
-
-        logger.debug("📝 Updating award history", {
-            awarder,
-            recipient,
-            givenData,
-        });
-
-        await updateUserWiki(context, awarder, recipient, givenData);
-
-        logger.info("✅ User wiki updated successfully", {
-            awarder,
-            recipient,
-        });
-    } catch (err) {
-        logger.error("❌ Failed to update user wiki (Normal award)", {
-            awarder,
-            recipient,
-            err,
-        });
-    }
-
-    // ============================================================
     // GET AWARDEE
     // ============================================================
 
@@ -718,50 +626,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (infoCommand) {
-            logger.info("ℹ️ Executing INFO command", {
-                user: user.username,
-            });
-
-            const formattedDMInfoMessage = formatMessage(
-                event,
-                TemplateDefaults.DMInfoMessage,
-                {
-                    username: user.username,
-                    subreddit: event.subreddit.name,
-                    prefix,
-                    permalink: event.comment.permalink,
-                }
-            );
-
-            await context.reddit.sendPrivateMessage({
-                to: user.username,
-                subject: "VIP Bot Info",
-                text: formattedDMInfoMessage,
-            });
-
-            logger.info("📨 Sent info message via DM", {
-                user: user.username,
-                subreddit: event.subreddit.name,
-            });
-
-            const formattedInfoMessageConfirmation = formatMessage(
-                event,
-                TemplateDefaults.InfoMessageConfirmation,
-                {}
-            );
-
-            const formattedInfoMessage = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: formattedInfoMessageConfirmation,
-            });
-
-            await formattedInfoMessage.distinguish();
-
-            logger.info("💬 Posted info confirmation", {
-                commentId: event.comment.id,
-            });
-
-            return;
+            await executeInfoCommand(event, context, user, prefix);
         }
 
         // --------------------------------------------------------
@@ -769,65 +634,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (helpCommand) {
-            logger.info("❓ Executing HELP command", {
-                user: user.username,
-                isMod,
-            });
-
-            if (!isMod) {
-                const formattedNormalDMHelpMessage = formatMessage(
-                    event,
-                    TemplateDefaults.NormalUserDMHelpMessage,
-                    { prefix }
-                );
-
-                await context.reddit.sendPrivateMessage({
-                    to: user.username,
-                    subject: "VIP Bot Help",
-                    text: formattedNormalDMHelpMessage,
-                });
-
-                logger.info("📨 Sent normal-user help DM", {
-                    user: user.username,
-                });
-                return;
-            } else if (isMod) {
-                const formattedModDMHelpMessage = formatMessage(
-                    event,
-                    TemplateDefaults.ModDMHelpMessage,
-                    { prefix }
-                );
-
-                await context.reddit.sendPrivateMessage({
-                    to: user.username,
-                    subject: "VIP Bot Help",
-                    text: formattedModDMHelpMessage,
-                });
-
-                logger.info("📨 Sent moderator help DM", {
-                    user: user.username,
-                });
-                return;
-            }
-
-            const helpMessageConfirmation = formatMessage(
-                event,
-                TemplateDefaults.HelpMessageConfirmation,
-                {}
-            );
-
-            const publicHelpMessage = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: helpMessageConfirmation,
-            });
-
-            await publicHelpMessage.distinguish();
-
-            logger.info("💬 Posted help confirmation", {
-                commentId: event.comment.id,
-            });
-
-            return;
+            await executeHelpCommand(event, user, isMod, prefix, context);
         }
 
         // --------------------------------------------------------
@@ -835,13 +642,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (profileCommand) {
-            logger.info("👤 Executing PROFILE command", {
-                user: user.username,
-            });
-
-            // Your profile command logic goes here.
-
-            return;
+            await executeProfileCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -853,10 +654,6 @@ export async function onCommentSubmit(
                 requester: user.username,
                 target: user.username,
             });
-
-            // Your user-rank command logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -867,10 +664,6 @@ export async function onCommentSubmit(
             logger.info("🏅 Executing RANK command", {
                 user: user.username,
             });
-
-            // Your rank command logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -881,10 +674,6 @@ export async function onCommentSubmit(
             logger.info("💰 Executing BALANCE command", {
                 user: user.username,
             });
-
-            // Your balance command logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -895,10 +684,6 @@ export async function onCommentSubmit(
             logger.info("🏆 Executing ACHIEVEMENTS command", {
                 user: user.username,
             });
-
-            // Your achievements command logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -909,10 +694,6 @@ export async function onCommentSubmit(
             logger.info("📊 Executing XP LEADERBOARD command", {
                 user: user.username,
             });
-
-            // Your XP leaderboard logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -923,10 +704,6 @@ export async function onCommentSubmit(
             logger.info("🪙 Executing COINS LEADERBOARD command", {
                 user: user.username,
             });
-
-            // Your coins leaderboard logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -937,10 +714,6 @@ export async function onCommentSubmit(
             logger.info("⭐ Executing REP LEADERBOARD command", {
                 user: user.username,
             });
-
-            // Your rep leaderboard logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -951,10 +724,6 @@ export async function onCommentSubmit(
             logger.info("📋 Executing LEADERBOARD command", {
                 user: user.username,
             });
-
-            // Your normal leaderboard logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -965,10 +734,6 @@ export async function onCommentSubmit(
             logger.info("🔥 Executing STREAK command", {
                 user: user.username,
             });
-
-            // Your streak logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -979,10 +744,6 @@ export async function onCommentSubmit(
             logger.info("👑 Executing VIPS command", {
                 user: user.username,
             });
-
-            // Your VIP list logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -995,10 +756,6 @@ export async function onCommentSubmit(
                 target: user.username,
                 isMod,
             });
-
-            // Your nominate logic goes here.
-
-            return;
         }
 
         // --------------------------------------------------------
@@ -1010,10 +767,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 argument: bodySplit[2],
             });
-
-            // Your gift logic goes here.
-
-            return;
         }
 
         if (vipAddDaysCommand) {
@@ -1021,10 +774,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 days: bodySplit[2],
             });
-
-            // Your VIP add-days logic goes here.
-
-            return;
         }
 
         if (addXpCommand) {
@@ -1032,10 +781,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 amount: bodySplit[2],
             });
-
-            // Your XP logic goes here.
-
-            return;
         }
 
         if (addCoinsCommand) {
@@ -1043,10 +788,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 amount: bodySplit[2],
             });
-
-            // Your coins logic goes here.
-
-            return;
         }
 
         if (addRepCommand) {
@@ -1054,10 +795,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 amount: bodySplit[2],
             });
-
-            // Your reputation logic goes here.
-
-            return;
         }
 
         if (setLevelCommand) {
@@ -1065,10 +802,6 @@ export async function onCommentSubmit(
                 user: user.username,
                 level: bodySplit[2],
             });
-
-            // Your set-level logic goes here.
-
-            return;
         }
 
         logger.warn("⚠️ Comment was detected but no handler matched", {

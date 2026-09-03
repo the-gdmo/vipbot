@@ -113,7 +113,7 @@ export enum TemplateDefaults {
         "{awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
     ModsAndPostAuthorDisallowedMessage = "Only moderators and Post Authors (OPs) can award {name}s.",
     UserPointsInitializedMessage = "Your {name} points have been initialized to 1. [Message the mods]({modmailLink}) if you have any questions.",
-    NewPostMessage = "Hello.\n\nTo all commentors/OP, if this is your first time experiencing u/vipbot2, " +
+    NewPostMessage = "Hello.\n\nTo all commenters/OP, if this is your first time experiencing u/vipbot2, " +
         "use `{prefix}info` to get information in your dms about how to use this bot.\n\n***NOTE: All commands are case-insensitive.***",
     DMInfoMessage = "Hey u/{username}!\n\nI see you are curious as to how to use me in r/{subreddit}.\n\n" +
         "Please use the `{prefix}help` command on [the post you used this on]({permalink}) to get another message listing all usable bot commands.",
