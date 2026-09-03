@@ -7,22 +7,18 @@ import {
 } from "../config/settings";
 import { formatMessage } from "../utils/formatting";
 import {
-    awardPointToUserNormalCommand,
-    commentContainsModCommand,
-    commentContainsUserCommand,
+    getCurrentScore,
     getParentComment,
-    getTriggers,
     InitialUserWikiOptions,
+    ScoreResult,
+    setUserScoreOnCommentSubmit,
     userHasPermission,
 } from "../utils/common-utils";
 
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
-import {
-    isModerator,
-} from "../config/commentTriggerContext";
-import { POINTS_STORE_KEY } from "../config/constants";
+import { isModerator } from "../config/commentTriggerContext";
 import { SafeWikiClient, updateUserWiki } from "../jobs/leaderboard";
 
 /**
@@ -33,7 +29,7 @@ import { SafeWikiClient, updateUserWiki } from "../jobs/leaderboard";
 
 export async function onCommentSubmit(
     event: CommentSubmit | CommentUpdate,
-    context: TriggerContext,
+    context: TriggerContext
 ) {
     if (!context.subredditName) return;
 
@@ -147,14 +143,14 @@ export async function onCommentSubmit(
     const isMod = await isModerator(
         context,
         context.subredditName,
-        user.username,
+        user.username
     );
     const hasPermission = await userHasPermission(
         event,
         user.id,
         user.username,
         context,
-        settings,
+        settings
     );
     // ============================================================
     // CONTEXT
@@ -189,17 +185,376 @@ export async function onCommentSubmit(
         new RegExp(
             `^${prefix}${command}\\s+u/
                 ${user.username}`,
-            "i",
+            "i"
         );
 
     // ============================================================
     // COMMAND DETECTION
     // ============================================================
 
-    logger.debug("🔎 Testing commands", {
-        commentBody,
-        prefix,
+    // ============================================================
+    // BLOCKED USERS
+    // ============================================================
+
+    const blockedUsers = (
+        (settings[AppSetting.UsersWhoCannotAwardPoints] as string) ?? ""
+    )
+        .split(/\r?\n/)
+        .map((w) => w.trim())
+        .filter(Boolean);
+
+    logger.debug("🚫 Checking blocked-user list", {
+        awarder,
+        blockedUsers,
+        isBlocked: blockedUsers.includes(awarder),
     });
+
+    if (blockedUsers.includes(awarder)) {
+        logger.warn("🚫 User is blocked from awarding points", {
+            awarder,
+            recipient,
+            subreddit: event.subreddit.name,
+        });
+
+        const blockedTemplate =
+            (settings[AppSetting.UsersWhoCannotAwardPointsMessage] as string) ??
+            TemplateDefaults.UsersWhoCannotAwardPointsMessage;
+
+        const notifyBlockedUserMode = (
+            settings[AppSetting.NotifyOnBlockedUser] as string[]
+        )?.[0];
+
+        const blockedMessage = formatMessage(event, blockedTemplate, {
+            name: pointName,
+            awarder,
+            subreddit: event.subreddit.name,
+        });
+
+        logger.debug("📨 Sending blocked-user notification", {
+            awarder,
+            mode: notifyBlockedUserMode,
+        });
+
+        if (
+            notifyBlockedUserMode ===
+            NotifyOnBlockedUserReplyOptions.ReplyAsComment
+        ) {
+            const message = await context.reddit.submitComment({
+                id: event.comment.id,
+                text: blockedMessage,
+            });
+
+            await message.distinguish();
+
+            logger.info("💬 Posted blocked-user response", {
+                awarder,
+            });
+        } else if (
+            notifyBlockedUserMode === NotifyOnBlockedUserReplyOptions.ReplyByPM
+        ) {
+            await context.reddit.sendPrivateMessage({
+                to: awarder,
+                text: blockedMessage,
+                subject:
+                    `You do not have permission to award ${pointName}s ` +
+                    `in r/${event.subreddit.name}`,
+            });
+
+            logger.info("📨 Sent blocked-user PM", {
+                awarder,
+            });
+        }
+
+        return;
+    }
+
+    // ============================================================
+    // COMMENT INCREMENT COMMAND REQUIREMENT
+    // ============================================================
+
+    if (increment !== 0) {
+        logger.debug("🔢 Comment increment is enabled", {
+            increment,
+        });
+
+        const currentScore = await getCurrentScore(user, context);
+
+        if (!currentScore) {
+            logger.error(`currentScore couldn't be found, returning.`);
+            return;
+        }
+        const newScore: ScoreResult = {
+            score: currentScore.score + increment,
+            userHasFlair: currentScore.userHasFlair,
+            flairIsNumber: currentScore.flairIsNumber,
+        };
+
+        setUserScoreOnCommentSubmit(
+            event,
+            context,
+            user.username,
+            newScore,
+            settings
+        );
+    }
+
+    // ============================================================
+    // SELF AWARD
+    // ============================================================
+
+    if (awarder === recipient) {
+        logger.warn("🛑 Self-award attempt detected", {
+            awarder,
+            recipient,
+            commentId: event.comment.id,
+        });
+
+        const selfAwardTemplate = formatMessage(
+            event,
+            (settings[AppSetting.SelfAwardMessage] as string) ??
+                TemplateDefaults.SelfAwardMessage,
+            {
+                awarder,
+                name: pointName,
+            }
+        );
+
+        const notifyNormalSelfAwardMode = (
+            settings[AppSetting.NotifyOnSelfAward] as string[]
+        )?.[0];
+
+        if (
+            notifyNormalSelfAwardMode ===
+            NotifyOnSelfAwardReplyOptions.ReplyAsComment
+        ) {
+            const selfAwardComment = await context.reddit.submitComment({
+                id: event.comment.id,
+                text: selfAwardTemplate,
+            });
+
+            await selfAwardComment.distinguish();
+
+            logger.info("💬 Posted self-award warning", {
+                awarder,
+            });
+        } else if (
+            notifyNormalSelfAwardMode ===
+            NotifyOnSelfAwardReplyOptions.ReplyByPM
+        ) {
+            await context.reddit.sendPrivateMessage({
+                to: awarder,
+                text: selfAwardTemplate,
+                subject: `You tried to award yourself a ${pointName}`,
+            });
+
+            logger.info("📨 Sent self-award warning via PM", {
+                awarder,
+            });
+        }
+
+        return;
+    }
+
+    // ============================================================
+    // DUPLICATE AWARD
+    // ============================================================
+
+    const key =
+        `userAwardGiven:${parentComment.id}:` +
+        `${event.post.id}:${event.subreddit.name}`;
+
+    logger.debug("🔑 Checking duplicate-award key", {
+        key,
+    });
+
+    const alreadyAwarded = await context.redis.exists(key);
+
+    logger.debug("🔍 Duplicate-award check complete", {
+        key,
+        alreadyAwarded,
+    });
+
+    if (alreadyAwarded) {
+        logger.warn("⚠️ Point already awarded", {
+            awarder,
+            recipient,
+            key,
+        });
+
+        const alreadyAwardedTemplate = formatMessage(
+            event,
+            (settings[AppSetting.PointAlreadyAwardedToUserMessage] as string) ??
+                TemplateDefaults.PointAlreadyAwardedToUserMessage,
+            {
+                awarder,
+                awardee: recipient,
+                name: pointName,
+            }
+        );
+
+        const notifyMode = (
+            settings[AppSetting.NotifyOnPointAlreadyAwardedToUser] as string[]
+        )?.[0];
+
+        if (
+            notifyMode ===
+            NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment
+        ) {
+            const message = await context.reddit.submitComment({
+                id: event.comment.id,
+                text: alreadyAwardedTemplate,
+            });
+
+            await message.distinguish();
+
+            logger.info("💬 Posted duplicate-award response", {
+                awarder,
+                recipient,
+            });
+        } else if (
+            notifyMode ===
+            NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyByPM
+        ) {
+            await context.reddit.sendPrivateMessage({
+                to: awarder,
+                subject:
+                    `[This comment](${parentComment.permalink}) ` +
+                    `has already received a ${pointName}`,
+                text: alreadyAwardedTemplate,
+            });
+
+            logger.info("📨 Sent duplicate-award PM", {
+                awarder,
+                recipient,
+            });
+        }
+
+        return;
+    }
+
+    // ============================================================
+    // AWARD POINT
+    // ============================================================
+
+    logger.info("🎁 Point award beginning", {
+        awarder,
+        recipient,
+        increment,
+        pointName,
+        key,
+    });
+
+    await context.redis.set(key, "1");
+
+    logger.debug("🔐 Duplicate-award key created", {
+        key,
+    });
+
+    // ============================================================
+    // USER WIKI
+    // ============================================================
+
+    try {
+        logger.info("📘 Updating user wiki pages", {
+            awarder,
+            recipient,
+            subreddit: event.subreddit.name,
+        });
+
+        const subredditName = event.subreddit.name;
+
+        const safeWiki = new SafeWikiClient(context.reddit);
+
+        const awarderWiki = await safeWiki.getWikiPage(
+            subredditName,
+            `user/${awarder.toLowerCase()}`
+        );
+
+        const recipientWiki = await safeWiki.getWikiPage(
+            subredditName,
+            `user/${recipient}`
+        );
+
+        logger.debug("📄 User wiki lookup results", {
+            awarderWikiExists: !!awarderWiki,
+            recipientWikiExists: !!recipientWiki,
+        });
+
+        if (!awarderWiki) {
+            logger.info("📝 Creating awarder wiki page", {
+                awarder,
+            });
+
+            await InitialUserWikiOptions(context, awarder);
+        }
+
+        if (!recipientWiki) {
+            logger.info("📝 Creating recipient wiki page", {
+                recipient,
+            });
+
+            await InitialUserWikiOptions(context, recipient);
+        }
+
+        const givenData = {
+            postTitle: event.post.title,
+            postUrl: event.post.permalink,
+            recipient,
+            commentUrl: event.comment.permalink,
+        };
+
+        logger.debug("📝 Updating award history", {
+            awarder,
+            recipient,
+            givenData,
+        });
+
+        await updateUserWiki(context, awarder, recipient, givenData);
+
+        logger.info("✅ User wiki updated successfully", {
+            awarder,
+            recipient,
+        });
+    } catch (err) {
+        logger.error("❌ Failed to update user wiki (Normal award)", {
+            awarder,
+            recipient,
+            err,
+        });
+    }
+
+    // ============================================================
+    // GET AWARDEE
+    // ============================================================
+
+    let awardee: User | undefined;
+
+    try {
+        logger.debug("👤 Looking up awardee", {
+            recipient,
+        });
+
+        awardee = await context.reddit.getUserByUsername(recipient);
+
+        logger.debug("✅ Awardee lookup successful", {
+            recipient: awardee?.username,
+        });
+    } catch (err) {
+        logger.warn("⚠️ Failed to look up awardee", {
+            recipient,
+            err,
+        });
+
+        awardee = undefined;
+    }
+
+    if (!awardee) {
+        logger.error("❌ Awardee could not be resolved", {
+            recipient,
+        });
+
+        return;
+    }
 
     const infoCommand = commandRegex("info").test(commentBody);
     const helpCommand = commandRegex("help").test(commentBody);
@@ -220,17 +575,17 @@ export async function onCommentSubmit(
 
     const xpLeaderboardCommand = new RegExp(
         `^${prefix}leaderboard\\s+xp(?:\\s|$)`,
-        "i",
+        "i"
     ).test(commentBody);
 
     const coinLeaderboardCommand = new RegExp(
         `^${prefix}leaderboard\\s+coins(?:\\s|$)`,
-        "i",
+        "i"
     ).test(commentBody);
 
     const repLeaderboardCommand = new RegExp(
         `^${prefix}leaderboard\\s+rep(?:\\s|$)`,
-        "i",
+        "i"
     ).test(commentBody);
 
     logger.debug("🧪 Command detection results", {
@@ -288,10 +643,8 @@ export async function onCommentSubmit(
 
         const threeArgRegex = (commandName: string): RegExp =>
             new RegExp(
-                `^${prefix}${commandName}\\s+u/${
-                    user.username
-                }\\s+${thirdArg}$`,
-                "i",
+                `^${prefix}${commandName}\\s+u/${user.username}\\s+${thirdArg}$`,
+                "i"
             );
 
         giftPointsCommand = threeArgRegex("gift").test(commentBody);
@@ -377,7 +730,7 @@ export async function onCommentSubmit(
                     subreddit: event.subreddit.name,
                     prefix,
                     permalink: event.comment.permalink,
-                },
+                }
             );
 
             await context.reddit.sendPrivateMessage({
@@ -394,7 +747,7 @@ export async function onCommentSubmit(
             const formattedInfoMessageConfirmation = formatMessage(
                 event,
                 TemplateDefaults.InfoMessageConfirmation,
-                {},
+                {}
             );
 
             const formattedInfoMessage = await context.reddit.submitComment({
@@ -425,7 +778,7 @@ export async function onCommentSubmit(
                 const formattedNormalDMHelpMessage = formatMessage(
                     event,
                     TemplateDefaults.NormalUserDMHelpMessage,
-                    { prefix },
+                    { prefix }
                 );
 
                 await context.reddit.sendPrivateMessage({
@@ -442,7 +795,7 @@ export async function onCommentSubmit(
                 const formattedModDMHelpMessage = formatMessage(
                     event,
                     TemplateDefaults.ModDMHelpMessage,
-                    { prefix },
+                    { prefix }
                 );
 
                 await context.reddit.sendPrivateMessage({
@@ -460,7 +813,7 @@ export async function onCommentSubmit(
             const helpMessageConfirmation = formatMessage(
                 event,
                 TemplateDefaults.HelpMessageConfirmation,
-                {},
+                {}
             );
 
             const publicHelpMessage = await context.reddit.submitComment({
@@ -718,478 +1071,11 @@ export async function onCommentSubmit(
             return;
         }
 
-        logger.warn("⚠️ Command was detected but no handler matched", {
+        logger.warn("⚠️ Comment was detected but no handler matched", {
             commentBody,
             bodySplit,
         });
 
         return;
     }
-
-    // ============================================================
-    // FROM THIS POINT DOWN:
-    // ONLY POINT-AWARD COMMANDS ARE PROCESSED.
-    // ============================================================
-
-    logger.debug("💎 No normal bot command detected; checking point trigger", {
-        commentBody,
-    });
-
-    // ============================================================
-    // POINT TRIGGERS
-    // ============================================================
-
-    const allTriggers = await getTriggers(context);
-
-    logger.debug("🎯 Loaded point triggers", {
-        allTriggers,
-        commentBody,
-    });
-
-    const triggerUsed = allTriggers.find((trigger) => {
-        const regex = new RegExp(`${trigger}`, "i");
-
-        const matched = regex.test(commentBody);
-
-        logger.debug("🧪 Testing point trigger", {
-            trigger,
-            regex: regex.source,
-            matched,
-        });
-
-        return matched;
-    });
-
-    if (!triggerUsed) {
-        logger.debug("➡️ No bot command or point trigger found", {
-            commentBody,
-        });
-
-        return;
-    }
-
-    logger.info("🎯 Point-award trigger detected", {
-        triggerUsed,
-        awarder,
-        recipient,
-        commentId: event.comment.id,
-        parentCommentId: parentComment.id,
-    });
-
-    // ============================================================
-    // BLOCKED USERS
-    // ============================================================
-
-    const blockedUsers = (
-        (settings[AppSetting.UsersWhoCannotAwardPoints] as string) ?? ""
-    )
-        .split(/\r?\n/)
-        .map((w) => w.trim())
-        .filter(Boolean);
-
-    logger.debug("🚫 Checking blocked-user list", {
-        awarder,
-        blockedUsers,
-        isBlocked: blockedUsers.includes(awarder),
-    });
-
-    if (blockedUsers.includes(awarder)) {
-        logger.warn("🚫 User is blocked from awarding points", {
-            awarder,
-            recipient,
-            subreddit: event.subreddit.name,
-        });
-
-        const blockedTemplate =
-            (settings[AppSetting.UsersWhoCannotAwardPointsMessage] as string) ??
-            TemplateDefaults.UsersWhoCannotAwardPointsMessage;
-
-        const notifyBlockedUserMode = (
-            settings[AppSetting.NotifyOnBlockedUser] as string[]
-        )?.[0];
-
-        const blockedMessage = formatMessage(event, blockedTemplate, {
-            name: pointName,
-            awarder,
-            subreddit: event.subreddit.name,
-        });
-
-        logger.debug("📨 Sending blocked-user notification", {
-            awarder,
-            mode: notifyBlockedUserMode,
-        });
-
-        if (
-            notifyBlockedUserMode ===
-            NotifyOnBlockedUserReplyOptions.ReplyAsComment
-        ) {
-            const message = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: blockedMessage,
-            });
-
-            await message.distinguish();
-
-            logger.info("💬 Posted blocked-user response", {
-                awarder,
-            });
-        } else if (
-            notifyBlockedUserMode === NotifyOnBlockedUserReplyOptions.ReplyByPM
-        ) {
-            await context.reddit.sendPrivateMessage({
-                to: awarder,
-                text: blockedMessage,
-                subject:
-                    `You do not have permission to award ${pointName}s ` +
-                    `in r/${event.subreddit.name}`,
-            });
-
-            logger.info("📨 Sent blocked-user PM", {
-                awarder,
-            });
-        }
-
-        return;
-    }
-
-    // ============================================================
-    // COMMENT INCREMENT COMMAND REQUIREMENT
-    // ============================================================
-
-    if (increment !== 0) {
-        logger.debug("🔢 Comment increment is enabled", {
-            increment,
-        });
-
-        const containsUserCommand = await commentContainsUserCommand(
-            event,
-            context,
-        );
-
-        const containsModCommand = await commentContainsModCommand(
-            event,
-            context,
-        );
-
-        logger.debug("🧪 Increment command checks", {
-            containsUserCommand,
-            containsModCommand,
-        });
-
-        if (!containsUserCommand && !containsModCommand) {
-            logger.info(
-                "➡️ Point trigger ignored because required command was not present",
-                {
-                    awarder,
-                    recipient,
-                    commentId: event.comment.id,
-                },
-            );
-
-            return;
-        }
-    }
-
-    // ============================================================
-    // SELF AWARD
-    // ============================================================
-
-    if (awarder === recipient) {
-        logger.warn("🛑 Self-award attempt detected", {
-            awarder,
-            recipient,
-            commentId: event.comment.id,
-        });
-
-        const selfAwardTemplate = formatMessage(
-            event,
-            (settings[AppSetting.SelfAwardMessage] as string) ??
-                TemplateDefaults.SelfAwardMessage,
-            {
-                awarder,
-                name: pointName,
-            },
-        );
-
-        const notifyNormalSelfAwardMode = (
-            settings[AppSetting.NotifyOnSelfAward] as string[]
-        )?.[0];
-
-        if (
-            notifyNormalSelfAwardMode ===
-            NotifyOnSelfAwardReplyOptions.ReplyAsComment
-        ) {
-            const selfAwardComment = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: selfAwardTemplate,
-            });
-
-            await selfAwardComment.distinguish();
-
-            logger.info("💬 Posted self-award warning", {
-                awarder,
-            });
-        } else if (
-            notifyNormalSelfAwardMode ===
-            NotifyOnSelfAwardReplyOptions.ReplyByPM
-        ) {
-            await context.reddit.sendPrivateMessage({
-                to: awarder,
-                text: selfAwardTemplate,
-                subject: `You tried to award yourself a ${pointName}`,
-            });
-
-            logger.info("📨 Sent self-award warning via PM", {
-                awarder,
-            });
-        }
-
-        return;
-    }
-
-    // ============================================================
-    // DUPLICATE AWARD
-    // ============================================================
-
-    const key =
-        `userAwardGiven:${parentComment.id}:` +
-        `${event.post.id}:${event.subreddit.name}`;
-
-    logger.debug("🔑 Checking duplicate-award key", {
-        key,
-    });
-
-    const alreadyAwarded = await context.redis.exists(key);
-
-    logger.debug("🔍 Duplicate-award check complete", {
-        key,
-        alreadyAwarded,
-    });
-
-    if (alreadyAwarded) {
-        logger.warn("⚠️ Point already awarded", {
-            awarder,
-            recipient,
-            key,
-        });
-
-        const alreadyAwardedTemplate = formatMessage(
-            event,
-            (settings[AppSetting.PointAlreadyAwardedToUserMessage] as string) ??
-                TemplateDefaults.PointAlreadyAwardedToUserMessage,
-            {
-                awarder,
-                awardee: recipient,
-                name: pointName,
-            },
-        );
-
-        const notifyMode = (
-            settings[AppSetting.NotifyOnPointAlreadyAwardedToUser] as string[]
-        )?.[0];
-
-        if (
-            notifyMode ===
-            NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment
-        ) {
-            const message = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: alreadyAwardedTemplate,
-            });
-
-            await message.distinguish();
-
-            logger.info("💬 Posted duplicate-award response", {
-                awarder,
-                recipient,
-            });
-        } else if (
-            notifyMode ===
-            NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyByPM
-        ) {
-            await context.reddit.sendPrivateMessage({
-                to: awarder,
-                subject:
-                    `[This comment](${parentComment.permalink}) ` +
-                    `has already received a ${pointName}`,
-                text: alreadyAwardedTemplate,
-            });
-
-            logger.info("📨 Sent duplicate-award PM", {
-                awarder,
-                recipient,
-            });
-        }
-
-        return;
-    }
-
-    // ============================================================
-    // AWARD POINT
-    // ============================================================
-
-    logger.info("🎁 Point award beginning", {
-        awarder,
-        recipient,
-        increment,
-        pointName,
-        triggerUsed,
-        key,
-    });
-
-    await context.redis.set(key, "1");
-
-    logger.debug("🔐 Duplicate-award key created", {
-        key,
-    });
-
-    // ============================================================
-    // USER WIKI
-    // ============================================================
-
-    try {
-        logger.info("📘 Updating user wiki pages", {
-            awarder,
-            recipient,
-            subreddit: event.subreddit.name,
-        });
-
-        const subredditName = event.subreddit.name;
-
-        const safeWiki = new SafeWikiClient(context.reddit);
-
-        const awarderWiki = await safeWiki.getWikiPage(
-            subredditName,
-            `user/${awarder.toLowerCase()}`,
-        );
-
-        const recipientWiki = await safeWiki.getWikiPage(
-            subredditName,
-            `user/${recipient}`,
-        );
-
-        logger.debug("📄 User wiki lookup results", {
-            awarderWikiExists: !!awarderWiki,
-            recipientWikiExists: !!recipientWiki,
-        });
-
-        if (!awarderWiki) {
-            logger.info("📝 Creating awarder wiki page", {
-                awarder,
-            });
-
-            await InitialUserWikiOptions(context, awarder);
-        }
-
-        if (!recipientWiki) {
-            logger.info("📝 Creating recipient wiki page", {
-                recipient,
-            });
-
-            await InitialUserWikiOptions(context, recipient);
-        }
-
-        const givenData = {
-            postTitle: event.post.title,
-            postUrl: event.post.permalink,
-            recipient,
-            commentUrl: event.comment.permalink,
-        };
-
-        logger.debug("📝 Updating award history", {
-            awarder,
-            recipient,
-            givenData,
-        });
-
-        await updateUserWiki(context, awarder, recipient, givenData);
-
-        logger.info("✅ User wiki updated successfully", {
-            awarder,
-            recipient,
-        });
-    } catch (err) {
-        logger.error("❌ Failed to update user wiki (Normal award)", {
-            awarder,
-            recipient,
-            err,
-        });
-    }
-
-    // ============================================================
-    // GET AWARDEE
-    // ============================================================
-
-    let awardee: User | undefined;
-
-    try {
-        logger.debug("👤 Looking up awardee", {
-            recipient,
-        });
-
-        awardee = await context.reddit.getUserByUsername(recipient);
-
-        logger.debug("✅ Awardee lookup successful", {
-            recipient: awardee?.username,
-        });
-    } catch (err) {
-        logger.warn("⚠️ Failed to look up awardee", {
-            recipient,
-            err,
-        });
-
-        awardee = undefined;
-    }
-
-    if (!awardee) {
-        logger.error("❌ Awardee could not be resolved", {
-            recipient,
-        });
-
-        return;
-    }
-
-    // ============================================================
-    // AWARD POINT
-    // ============================================================
-
-    logger.info("🏆 Calling awardPointToUserNormalCommand", {
-        awarder,
-        awardee: awardee.username,
-        increment,
-    });
-
-    await awardPointToUserNormalCommand(
-        event,
-        context,
-        awarder,
-        awardee,
-        increment,
-    );
-
-    logger.info("✅ Point awarded successfully", {
-        awarder,
-        recipient,
-        increment,
-    });
-
-    // ============================================================
-    // AUTO SUPERUSER
-    // ============================================================
-
-    const currentScore =
-        ((await context.redis.zScore(POINTS_STORE_KEY, recipient)) as number) ??
-        0;
-
-    logger.debug("📊 Current recipient score", {
-        recipient,
-        currentScore,
-        pointsKey: POINTS_STORE_KEY,
-    });
-
-    logger.info("🏁 Comment handler completed successfully", {
-        commentId: event.comment.id,
-        awarder,
-        recipient,
-    });
 }

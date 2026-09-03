@@ -6,7 +6,6 @@ import {
 
 export enum AppSetting {
     CommandPrefix = "commandPrefix",
-    PointTriggerWords = "pointTriggerWords",
     PointSymbol = "pointSymbol",
     AccessControl = "accessControl",
     FlairFormatting = "flairFormatting",
@@ -17,7 +16,6 @@ export enum AppSetting {
     PointName = "pointName",
     NotifyOnNormalAwardSuccess = "notifyOnNormalAwardSuccess",
     NormalAwardSuccessMessage = "normalAwardSuccessMessage",
-    ModAwardCommand = "modAwardCommand",
     VIPUsers = "VIPUsers",
     NotifyOnAutoSuperuser = "notifyOnAutoSuperuser",
     AutoSuperuserThreshold = "autoSuperuserThreshold",
@@ -617,15 +615,6 @@ export const appSettings: SettingsFormField[] = [
                 onValidate: stringOrParagraphFieldContainsText,
             },
             {
-                type: "paragraph",
-                name: AppSetting.PointTriggerWords,
-                label: "VIP Trigger Words",
-                helpText:
-                    "List of trigger words users can type to award VIP points (e.g., !vip, .vip). Each command should be on a new line.",
-                defaultValue: "!vip\n.vip",
-                onValidate: validateTriggerWords,
-            },
-            {
                 type: "boolean",
                 name: AppSetting.AllowUnflairedPosts,
                 label: "Allow awarding points on unflaired posts?",
@@ -850,15 +839,6 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.VIPUsers,
                 label: "A list of trusted users other than mods who can award points",
                 helpText: "Each username should be on a new line",
-            },
-            {
-                name: AppSetting.ModAwardCommand,
-                type: "string",
-                label: "Trusted User/Mod award command",
-                helpText:
-                    "Optional. Alternate command for mods and trusted users to award reputation points",
-                defaultValue: "!modvip",
-                onValidate: validateModTriggerCommand,
             },
             {
                 type: "select",
@@ -1180,41 +1160,16 @@ function isFlairTemplateValid(event: SettingsFormFieldValidatorEvent<string>) {
 }
 
 function selectFieldHasOptionChosen(
-    event: SettingsFormFieldValidatorEvent<string[]>,
+    event: SettingsFormFieldValidatorEvent<string[]>
 ) {
     if (!event.value || event.value.length !== 1) {
         return "You must choose an option (even if this is an irrelevant setting)";
     }
 }
 
-function validateTriggerWords(event: SettingsFormFieldValidatorEvent<string>) {
-    if (!event.value || event.value.trim() === "") {
-        return "You must specify at least one trigger word";
-    }
-    const lines = event.value.split("\n").map((line) => line.trim());
-    if (lines.length === 0 || lines.some((line) => line === "")) {
-        return "You must specify at least one trigger word";
-    }
-
-    if (!lines.some((line) => line.match(/^[\x20-\x7E]+$/gim))) {
-        return "Trigger words may only contain characters that exist on a standard computer keyboard";
-    }
-}
-
-function validateModTriggerCommand(
-    event: SettingsFormFieldValidatorEvent<string>,
-) {
-    if (!event.value || event.value.trim() === "") {
-        return "You must specify a command (even if you don't intend to use it)";
-    }
-    if (!event.value.match(/^[\x20-\x7E]+$/gi)) {
-        return "Command may only contain characters that exist on a standard computer keyboard";
-    }
-}
-
 // 🧮 Validate "Awards Required To Create New Posts"
 export function numberFieldHasValidOption(
-    event: SettingsFormFieldValidatorEvent<number>,
+    event: SettingsFormFieldValidatorEvent<number>
 ) {
     if (typeof event.value !== "number" || isNaN(event.value)) {
         return "Value must be a number.";
@@ -1227,7 +1182,7 @@ export function numberFieldHasValidOption(
 
 function stringOrParagraphFieldContainsText(
     event: SettingsFormFieldValidatorEvent<string>,
-    _context: TriggerContext,
+    _context: TriggerContext
 ): string | void {
     if (typeof event.value !== "string") {
         return "Value must be a string.";
@@ -1240,7 +1195,7 @@ function stringOrParagraphFieldContainsText(
 
 function levelThresholdIsValid(
     event: SettingsFormFieldValidatorEvent<string>,
-    _: TriggerContext,
+    _: TriggerContext
 ): string | void {
     if (typeof event.value !== "string") {
         return "Value must be a string.";
