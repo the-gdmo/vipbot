@@ -1,8 +1,15 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { formatMessage } from "../utils/formatting";
 import { logger } from "../utils/logger";
-import { TemplateDefaults } from "./settings";
+import { AppSetting, TemplateDefaults } from "./settings";
 import { TriggerContext, User } from "@devvit/public-api";
+import {
+    getProfileAchievements,
+    getProfilePointHistory,
+    getProfileProgress,
+    getProfileRecentAwards,
+    getProfileReputation,
+} from "./getters";
 
 export async function executeInfoCommand(
     event: CommentSubmit | CommentUpdate,
@@ -141,7 +148,11 @@ export async function executeHelpCommand(
  * @param user User from \@devvit/public-api
  */
 
-export async function executeUserRankCommand() {
+export async function executeUserRankCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("🏆 Executing USER RANK command", {
         requester: user.username,
         target: user.username,
@@ -149,6 +160,7 @@ export async function executeUserRankCommand() {
 
     return;
 }
+
 export async function executeProfileCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
@@ -160,75 +172,47 @@ export async function executeProfileCommand(
 
     if (!event.comment || !event.author) return;
 
-    /*
+    const settings = await context.settings.getAll();
+    const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
 
-# u/ryry50583583's VIPBot Profile
+    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n\n`;
 
-## 🏆 Reputation
+    if (symbol) {
+        wikiContents += `## ${symbol} Reputation\n\n`;
+        wikiContents += await getProfileReputation(user, context);
+    } else {
+        wikiContents += `## Reputation\n\n`;
+        wikiContents += (await getProfileReputation(user, context)) + `\n\n`;
+        wikiContents += `---\n\n`;
+    }
 
-| Statistic | Value |
-|---|---:|
-| **VIP Points** | 1,247 |
-| **Global Rank** | #12 |
-| **Awards Received** | 1,247 |
-| **Awards Given** | 386 |
-| **Current Level** | 13 |
-| **Next Level** | 1,300 XP |
+    wikiContents += `## 📈 Progress\n\n`;
+    wikiContents += (await getProfileProgress(user, context)) + `\n\n`;
+    wikiContents += `---\n\n`;
 
----
+    wikiContents += `## 🥇 Achievements\n\n`;
+    wikiContents += (await getProfileAchievements(user, context)) + `\n\n`;
+    wikiContents += `---\n\n`;
 
-## 📈 Progress
+    wikiContents += `## 📜 Recent Awards\n\n`;
+    wikiContents += (await getProfileRecentAwards(user, context)) + `\n\n`;
+    wikiContents += `---\n\n`;
 
-**Level 13**
+    wikiContents += `## 📊 Point History\n\n`;
+    wikiContents += (await getProfilePointHistory(user, context)) + `\n\n`;
+    wikiContents += `---\n\n`;
 
-**1,247 / 1,300**
-
-53 VIP Points until Level 14.
-
----
-
-## 🥇 Achievements
-
-- 🏆 **Top 25 Global**
-- ⭐ **1,000 VIP Points**
-- 🎖️ **500 Awards Received**
-- 💎 **Active Commenter**
-
----
-
-## 📜 Recent Awards
-
-| Date | Awarded By | Points |
-|---|---|---:|
-| Sep 2, 2026 | u/Bob | +1 |
-| Sep 1, 2026 | u/Charlie | +1 |
-| Aug 31, 2026 | u/David | +1 |
-| Aug 30, 2026 | u/Eve | +1 |
-| Aug 29, 2026 | u/Bob | +1 |
-
----
-
-## 📊 Point History
-
-| Period | Points |
-|---|---:|
-| Today | 12 |
-| This Week | 47 |
-| This Month | 183 |
-| This Year | 1,247 |
-| All Time | **1,247** |
-
----
-
-*Profile maintained automatically by VIPBot.*
-*Last updated: September 2, 2026*
-
-*/
-
+    wikiContents += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
+        .getTime()
+        .toString()}*`;
     return;
 }
 
-export async function executeRankCommand() {
+export async function executeRankCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("🏅 Executing RANK command", {
         user: user.username,
     });
@@ -236,7 +220,11 @@ export async function executeRankCommand() {
     return;
 }
 
-export async function executeBalanceCommand() {
+export async function executeBalanceCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("💰 Executing BALANCE command", {
         user: user.username,
     });
@@ -244,7 +232,11 @@ export async function executeBalanceCommand() {
     return;
 }
 
-export async function executeAchievementCommand() {
+export async function executeAchievementCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("🏆 Executing ACHIEVEMENTS command", {
         user: user.username,
     });
@@ -252,7 +244,11 @@ export async function executeAchievementCommand() {
     return;
 }
 
-export async function executeXPLeaderboardCommand() {
+export async function executeXPLeaderboardCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("📊 Executing XP LEADERBOARD command", {
         user: user.username,
     });
@@ -260,7 +256,11 @@ export async function executeXPLeaderboardCommand() {
     return;
 }
 
-export async function executeCoinLeaderboardCommand() {
+export async function executeCoinLeaderboardCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("🪙 Executing COINS LEADERBOARD command", {
         user: user.username,
     });
@@ -268,7 +268,11 @@ export async function executeCoinLeaderboardCommand() {
     return;
 }
 
-export async function executeRepLeaderboardCommand() {
+export async function executeRepLeaderboardCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("⭐ Executing REP LEADERBOARD command", {
         user: user.username,
     });
@@ -276,7 +280,11 @@ export async function executeRepLeaderboardCommand() {
     return;
 }
 
-export async function executeLeaderboardCommand() {
+export async function executeLeaderboardCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("📋 Executing LEADERBOARD command", {
         user: user.username,
     });
@@ -284,7 +292,11 @@ export async function executeLeaderboardCommand() {
     return;
 }
 
-export async function executeStreakCommand() {
+export async function executeStreakCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("🔥 Executing STREAK command", {
         user: user.username,
     });
@@ -292,7 +304,11 @@ export async function executeStreakCommand() {
     return;
 }
 
-export async function executeVIPCommand() {
+export async function executeVIPCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User
+) {
     logger.info("👑 Executing VIPS command", {
         user: user.username,
     });
@@ -300,7 +316,12 @@ export async function executeVIPCommand() {
     return;
 }
 
-export async function executeNominateCommand() {
+export async function executeNominateCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    isMod: boolean
+) {
     logger.info("🗳️ Executing NOMINATE command", {
         requester: user.username,
         target: user.username,
@@ -310,7 +331,12 @@ export async function executeNominateCommand() {
     return;
 }
 
-export async function executeGiftPointsCommand() {
+export async function executeGiftPointsCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("🎁 Executing GIFT command", {
         user: user.username,
         argument: bodySplit[2],
@@ -319,7 +345,12 @@ export async function executeGiftPointsCommand() {
     return;
 }
 
-export async function executeVIPAddDaysCommand() {
+export async function executeVIPAddDaysCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("👑 Executing VIPADD command", {
         user: user.username,
         days: bodySplit[2],
@@ -328,7 +359,12 @@ export async function executeVIPAddDaysCommand() {
     return;
 }
 
-export async function executeSetXPCommand() {
+export async function executeSetXPCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("✨ Executing SETXP command", {
         user: user.username,
         amount: bodySplit[2],
@@ -337,7 +373,12 @@ export async function executeSetXPCommand() {
     return;
 }
 
-export async function executeSetCoinsCommand() {
+export async function executeSetCoinsCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("🪙 Executing SETCOINS command", {
         user: user.username,
         amount: bodySplit[2],
@@ -346,7 +387,12 @@ export async function executeSetCoinsCommand() {
     return;
 }
 
-export async function executeSetReputationCommand() {
+export async function executeSetReputationCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("⭐ Executing SETREP command", {
         user: user.username,
         amount: bodySplit[2],
@@ -355,7 +401,12 @@ export async function executeSetReputationCommand() {
     return;
 }
 
-export async function executeSetLevelCommand() {
+export async function executeSetLevelCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    user: User,
+    bodySplit: string
+) {
     logger.info("📈 Executing SETLEVEL command", {
         user: user.username,
         level: bodySplit[2],
