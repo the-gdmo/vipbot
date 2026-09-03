@@ -4,7 +4,7 @@ export async function getProfileReputation(
     user: User,
     context: TriggerContext
 ) {
-    /*
+/*
 ## 🏆 Reputation
 
 | Statistic | Value |
@@ -18,7 +18,7 @@ export async function getProfileReputation(
 */
 }
 export async function getProfileProgress(user: User, context: TriggerContext) {
-    /*
+/*
 ## 📈 Progress
 
 **Level 13**
@@ -32,7 +32,7 @@ export async function getProfileAchievements(
     user: User,
     context: TriggerContext
 ) {
-    /*
+/*
 ## 🥇 Achievements
 
 - 🏆 **Top 25 Global**
@@ -45,7 +45,7 @@ export async function getProfileRecentAwards(
     user: User,
     context: TriggerContext
 ) {
-    /*
+/*
 ## 📜 Recent Awards
 
 | Date | Awarded By | Points |
