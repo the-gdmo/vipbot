@@ -140,6 +140,15 @@ export async function executeHelpCommand(
  * @param context TriggerContext from \@devvit/public-api
  * @param user User from \@devvit/public-api
  */
+
+export async function executeUserRankCommand() {
+    logger.info("🏆 Executing USER RANK command", {
+        requester: user.username,
+        target: user.username,
+    });
+
+    return;
+}
 export async function executeProfileCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
@@ -151,7 +160,7 @@ export async function executeProfileCommand(
 
     if (!event.comment || !event.author) return;
 
-/*
+    /*
 
 # u/ryry50583583's VIPBot Profile
 
@@ -215,4 +224,142 @@ export async function executeProfileCommand(
 *Last updated: September 2, 2026*
 
 */
+
+    return;
+}
+
+export async function executeRankCommand() {
+    logger.info("🏅 Executing RANK command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeBalanceCommand() {
+    logger.info("💰 Executing BALANCE command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeAchievementCommand() {
+    logger.info("🏆 Executing ACHIEVEMENTS command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeXPLeaderboardCommand() {
+    logger.info("📊 Executing XP LEADERBOARD command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeCoinLeaderboardCommand() {
+    logger.info("🪙 Executing COINS LEADERBOARD command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeRepLeaderboardCommand() {
+    logger.info("⭐ Executing REP LEADERBOARD command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeLeaderboardCommand() {
+    logger.info("📋 Executing LEADERBOARD command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeStreakCommand() {
+    logger.info("🔥 Executing STREAK command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeVIPCommand() {
+    logger.info("👑 Executing VIPS command", {
+        user: user.username,
+    });
+
+    return;
+}
+
+export async function executeNominateCommand() {
+    logger.info("🗳️ Executing NOMINATE command", {
+        requester: user.username,
+        target: user.username,
+        isMod,
+    });
+
+    return;
+}
+
+export async function executeGiftPointsCommand() {
+    logger.info("🎁 Executing GIFT command", {
+        user: user.username,
+        argument: bodySplit[2],
+    });
+
+    return;
+}
+
+export async function executeVIPAddDaysCommand() {
+    logger.info("👑 Executing VIPADD command", {
+        user: user.username,
+        days: bodySplit[2],
+    });
+
+    return;
+}
+
+export async function executeSetXPCommand() {
+    logger.info("✨ Executing SETXP command", {
+        user: user.username,
+        amount: bodySplit[2],
+    });
+
+    return;
+}
+
+export async function executeSetCoinsCommand() {
+    logger.info("🪙 Executing SETCOINS command", {
+        user: user.username,
+        amount: bodySplit[2],
+    });
+
+    return;
+}
+
+export async function executeSetReputationCommand() {
+    logger.info("⭐ Executing SETREP command", {
+        user: user.username,
+        amount: bodySplit[2],
+    });
+
+    return;
+}
+
+export async function executeSetLevelCommand() {
+    logger.info("📈 Executing SETLEVEL command", {
+        user: user.username,
+        level: bodySplit[2],
+    });
+
+    return;
 }

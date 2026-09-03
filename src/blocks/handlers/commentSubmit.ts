@@ -18,7 +18,7 @@ import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { isModerator } from "../config/commentTriggerContext";
-import { executeHelpCommand, executeInfoCommand, executeProfileCommand } from "../config/commandExecutors";
+import { executeAchievementCommand, executeBalanceCommand, executeCoinLeaderboardCommand, executeGiftPointsCommand, executeHelpCommand, executeInfoCommand, executeLeaderboardCommand, executeNominateCommand, executeProfileCommand, executeRankCommand, executeRepLeaderboardCommand, executeSetCoinsCommand, executeSetLevelCommand, executeSetReputationCommand, executeSetXPCommand, executeStreakCommand, executeUserRankCommand, executeVIPAddDaysCommand, executeVIPCommand, executeXPLeaderboardCommand } from "../config/commandExecutors";
 
 /**
  * Handles newly submitted comments.
@@ -519,9 +519,9 @@ export async function onCommentSubmit(
 
     let giftPointsCommand = false;
     let vipAddDaysCommand = false;
-    let addXpCommand = false;
-    let addCoinsCommand = false;
-    let addRepCommand = false;
+    let setXpCommand = false;
+    let setCoinsCommand = false;
+    let setRepCommand = false;
     let setLevelCommand = false;
 
     if (!hasPermission) {
@@ -559,18 +559,18 @@ export async function onCommentSubmit(
         vipAddDaysCommand = threeArgRegex("vipadd").test(commentBody);
 
         // FIXED: These previously all incorrectly tested "vipadd".
-        addXpCommand = threeArgRegex("addxp").test(commentBody);
-        addCoinsCommand = threeArgRegex("addcoins").test(commentBody);
-        addRepCommand = threeArgRegex("addrep").test(commentBody);
+        setXpCommand = threeArgRegex("setxp").test(commentBody);
+        setCoinsCommand = threeArgRegex("setcoins").test(commentBody);
+        setRepCommand = threeArgRegex("setrep").test(commentBody);
 
         setLevelCommand = threeArgRegex("setlevel").test(commentBody);
 
         logger.debug("🧪 Three-argument command results", {
             giftPointsCommand,
             vipAddDaysCommand,
-            addXpCommand,
-            addCoinsCommand,
-            addRepCommand,
+            setXpCommand,
+            setCoinsCommand,
+            setRepCommand,
             setLevelCommand,
         });
     }
@@ -596,9 +596,9 @@ export async function onCommentSubmit(
         nominateCommand ||
         giftPointsCommand ||
         vipAddDaysCommand ||
-        addXpCommand ||
-        addCoinsCommand ||
-        addRepCommand ||
+        setXpCommand ||
+        setCoinsCommand ||
+        setRepCommand ||
         setLevelCommand;
 
     logger.debug("📋 Command classification", {
@@ -650,10 +650,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (userRankCommand) {
-            logger.info("🏆 Executing USER RANK command", {
-                requester: user.username,
-                target: user.username,
-            });
+            await executeUserRankCommand();
         }
 
         // --------------------------------------------------------
@@ -661,9 +658,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (rankCommand) {
-            logger.info("🏅 Executing RANK command", {
-                user: user.username,
-            });
+            await executeRankCommand();
         }
 
         // --------------------------------------------------------
@@ -671,9 +666,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (balanceCommand) {
-            logger.info("💰 Executing BALANCE command", {
-                user: user.username,
-            });
+            await executeBalanceCommand();
         }
 
         // --------------------------------------------------------
@@ -681,9 +674,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (achievementsCommand) {
-            logger.info("🏆 Executing ACHIEVEMENTS command", {
-                user: user.username,
-            });
+            executeAchievementCommand();
         }
 
         // --------------------------------------------------------
@@ -691,9 +682,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (xpLeaderboardCommand) {
-            logger.info("📊 Executing XP LEADERBOARD command", {
-                user: user.username,
-            });
+            await executeXPLeaderboardCommand();
         }
 
         // --------------------------------------------------------
@@ -701,9 +690,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (coinLeaderboardCommand) {
-            logger.info("🪙 Executing COINS LEADERBOARD command", {
-                user: user.username,
-            });
+            await executeCoinLeaderboardCommand();
         }
 
         // --------------------------------------------------------
@@ -711,9 +698,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (repLeaderboardCommand) {
-            logger.info("⭐ Executing REP LEADERBOARD command", {
-                user: user.username,
-            });
+            await executeRepLeaderboardCommand();
         }
 
         // --------------------------------------------------------
@@ -721,9 +706,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (leaderboardCommand) {
-            logger.info("📋 Executing LEADERBOARD command", {
-                user: user.username,
-            });
+            await executeLeaderboardCommand();
         }
 
         // --------------------------------------------------------
@@ -731,9 +714,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (streakCommand) {
-            logger.info("🔥 Executing STREAK command", {
-                user: user.username,
-            });
+            await executeStreakCommand();
         }
 
         // --------------------------------------------------------
@@ -741,9 +722,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (vipsCommand) {
-            logger.info("👑 Executing VIPS command", {
-                user: user.username,
-            });
+            await executeVIPCommand();
         }
 
         // --------------------------------------------------------
@@ -751,11 +730,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (nominateCommand) {
-            logger.info("🗳️ Executing NOMINATE command", {
-                requester: user.username,
-                target: user.username,
-                isMod,
-            });
+            await executeNominateCommand();
         }
 
         // --------------------------------------------------------
@@ -763,45 +738,27 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (giftPointsCommand) {
-            logger.info("🎁 Executing GIFT command", {
-                user: user.username,
-                argument: bodySplit[2],
-            });
+            await executeGiftPointsCommand();
         }
 
         if (vipAddDaysCommand) {
-            logger.info("👑 Executing VIPADD command", {
-                user: user.username,
-                days: bodySplit[2],
-            });
+            await executeVIPAddDaysCommand();
         }
 
-        if (addXpCommand) {
-            logger.info("✨ Executing ADDXP command", {
-                user: user.username,
-                amount: bodySplit[2],
-            });
+        if (setXpCommand) {
+            await executeSetXPCommand();
         }
 
-        if (addCoinsCommand) {
-            logger.info("🪙 Executing ADDCOINS command", {
-                user: user.username,
-                amount: bodySplit[2],
-            });
+        if (setCoinsCommand) {
+            await executeSetCoinsCommand();
         }
 
-        if (addRepCommand) {
-            logger.info("⭐ Executing ADDREP command", {
-                user: user.username,
-                amount: bodySplit[2],
-            });
+        if (setRepCommand) {
+            await executeSetReputationCommand();
         }
 
         if (setLevelCommand) {
-            logger.info("📈 Executing SETLEVEL command", {
-                user: user.username,
-                level: bodySplit[2],
-            });
+            await executeSetLevelCommand();   
         }
 
         logger.warn("⚠️ Comment was detected but no handler matched", {
