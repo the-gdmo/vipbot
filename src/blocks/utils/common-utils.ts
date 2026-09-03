@@ -244,7 +244,7 @@ export async function replyToUser(
 
     // 🚫 Prevent bot loops
     if (
-        recipient.toLowerCase() === context.appSlug.toLowerCase() ||
+        recipient.toLowerCase() === context.appName.toLowerCase() ||
         recipient.toLowerCase() === "automoderator"
     ) {
         logger.debug("🤖 replyToUser: recipient is bot/system — skipping");
@@ -429,7 +429,7 @@ export async function unflairedPostLogic(
     // 🚫 Unflaired posts not allowed
     if (!allowUnflairedPosts && postFlairText === "") {
         // 🚫 Ignore bot’s own comments to prevent loops
-        if (event.author.name === context.appSlug) {
+        if (event.author.name === context.appName) {
             logger.debug(
                 "🤖 Bot-authored comment detected; skipping unflaired-post response"
             );
@@ -541,7 +541,7 @@ export async function flairTextNotAllowedLogic(
             disallowedFlairs,
         });
 
-        if (event.author.name === context.appSlug) {
+        if (event.author.name === context.appName) {
             // 🚫 Ignore bot’s own comments to prevent loops
             logger.debug(
                 "🤖 Bot-authored comment detected; skipping disallowed flair response"
@@ -771,7 +771,7 @@ export async function recipientIsBot(
     if (!event.comment) return;
     const pointName = (settings[AppSetting.PointName] as string) ?? "point";
     if (
-        ["automoderator", context.appSlug.toLowerCase()].includes(
+        ["automoderator", context.appName.toLowerCase()].includes(
             awarder.toLowerCase()
         )
     ) {
@@ -780,7 +780,7 @@ export async function recipientIsBot(
     }
 
     if (
-        ["automoderator", context.appSlug.toLowerCase()].includes(
+        ["automoderator", context.appName.toLowerCase()].includes(
             recipient.toLowerCase()
         )
     ) {
