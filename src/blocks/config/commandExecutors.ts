@@ -4,12 +4,8 @@ import { logger } from "../utils/logger";
 import { AppSetting, TemplateDefaults } from "./settings";
 import { TriggerContext, User } from "@devvit/public-api";
 import {
-    getProfileAchievements,
-    getProfilePointHistory,
-    getProfileProgress,
-    getProfileRecentAwards,
-    getProfileReputation,
-} from "./getters";
+    UserProfile,
+} from "./userProfile";
 
 export async function executeInfoCommand(
     event: CommentSubmit | CommentUpdate,
@@ -174,33 +170,33 @@ export async function executeProfileCommand(
 
     const settings = await context.settings.getAll();
     const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
-
+    const userProfile = new UserProfile(user, context);
     let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n\n`;
 
     if (symbol) {
         wikiContents += `## ${symbol} Reputation\n\n`;
-        wikiContents += (await getProfileReputation(user, context)) + `\n\n`;
+        wikiContents += userProfile.getReputation + `\n\n`;
         wikiContents += `---\n\n`;
     } else {
         wikiContents += `## Reputation\n\n`;
-        wikiContents += (await getProfileReputation(user, context)) + `\n\n`;
+        wikiContents += userProfile.getReputation + `\n\n`;
         wikiContents += `---\n\n`;
     }
 
     wikiContents += `## 📈 Progress\n\n`;
-    wikiContents += (await getProfileProgress(user, context)) + `\n\n`;
+    wikiContents += userProfile.getProgress + `\n\n`;
     wikiContents += `---\n\n`;
 
     wikiContents += `## 🥇 Achievements\n\n`;
-    wikiContents += (await getProfileAchievements(user, context)) + `\n\n`;
+    wikiContents += userProfile.getAchievements + `\n\n`;
     wikiContents += `---\n\n`;
 
     wikiContents += `## 📜 Recent Awards\n\n`;
-    wikiContents += (await getProfileRecentAwards(user, context)) + `\n\n`;
+    wikiContents += userProfile.getRecentAwards + `\n\n`;
     wikiContents += `---\n\n`;
 
     wikiContents += `## 📊 Point History\n\n`;
-    wikiContents += (await getProfilePointHistory(user, context)) + `\n\n`;
+    wikiContents += userProfile.getPointHistory + `\n\n`;
     wikiContents += `---\n\n`;
 
     wikiContents += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
