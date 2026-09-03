@@ -7,12 +7,13 @@ export class UserProfile {
         private readonly context: TriggerContext
     ) {}
 
-    async setVipPoints(points: number): Promise<void> {
+    async setVipPoints(value: number): Promise<void> {
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
-        await this.context.redis.set(userVipPointsKey, points.toString());
+        await this.context.redis.set(userVipPointsKey, value.toString());
     }
 
     async getVipPoints(): Promise<number> {
+        //| **VIP Points** | 1,247 |
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
         const points = await this.context.redis.get(userVipPointsKey);
 
@@ -23,16 +24,16 @@ export class UserProfile {
         const [
             vipPoints,
             subredditRank,
-            vipPointsReceived,
             vipPointsGiven,
+            vipPointsReceived,
             currentLevel,
             nextLevel,
             xpToNextLevel,
         ] = await Promise.all([
             this.getVipPoints(),
             this.getSubredditRank(),
-            this.getVipPointsReceived(),
             this.getVipPointsGiven(),
+            this.getVipPointsReceived(),
             this.getCurrentUserLevel(),
             this.getNextUserLevel(),
             this.getXpToNextLevel(),
@@ -41,8 +42,8 @@ export class UserProfile {
         return {
             vipPoints,
             subredditRank,
-            vipPointsReceived,
             vipPointsGiven,
+            vipPointsReceived,
             currentLevel,
             nextLevel,
             xpToNextLevel,
@@ -86,31 +87,39 @@ export class UserProfile {
 
     private async getSubredditRank() {
         // TODO: Implement subreddit rank lookup.
+        //| **Subreddit Rank** | #12 |
         return 0;
     }
 
     private async getVipPointsReceived() {
         // TODO: Implement VIP points received lookup.
+        //| **VIP Points Received** | 386 |
         return 0;
     }
 
     private async getVipPointsGiven() {
         // TODO: Implement VIP points given lookup.
+        //| **VIP Points Given** | 386 |
+
         return 0;
     }
 
     private async getCurrentUserLevel() {
         // TODO: Implement current level lookup.
+        //| **Current Level** | 13 |
+
         return 0;
     }
 
     private async getNextUserLevel() {
         // TODO: Implement next level lookup.
+        //| **Next Level** | 14 |
         return 0;
     }
 
     private async getXpToNextLevel() {
         // TODO: Implement XP-to-next-level lookup.
+        //| **XP To Next Level** | 100 |
         return 0;
     }
 }

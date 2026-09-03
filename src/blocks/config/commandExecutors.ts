@@ -171,32 +171,32 @@ export async function executeProfileCommand(
     const settings = await context.settings.getAll();
     const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
     const userProfile = new UserProfile(user, context);
-    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n\n`;
+    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n`;
 
     if (symbol) {
-        wikiContents += `## ${symbol} Reputation\n\n`;
-        wikiContents += userProfile.getReputation + `\n\n`;
+        wikiContents += `## ${symbol} Reputation\n`;
+        wikiContents += userProfile.getReputation + `\n`;
         wikiContents += `---\n\n`;
     } else {
-        wikiContents += `## Reputation\n\n`;
-        wikiContents += userProfile.getReputation + `\n\n`;
+        wikiContents += `## Reputation\n`;
+        wikiContents += userProfile.getReputation + `\n`;
         wikiContents += `---\n\n`;
     }
 
-    wikiContents += `## 📈 Progress\n\n`;
-    wikiContents += userProfile.getProgress + `\n\n`;
+    wikiContents += `## 📈 Progress\n`;
+    wikiContents += userProfile.getProgress + `\n`;
     wikiContents += `---\n\n`;
 
-    wikiContents += `## 🥇 Achievements\n\n`;
-    wikiContents += userProfile.getAchievements + `\n\n`;
+    wikiContents += `## 🥇 Achievements\n`;
+    wikiContents += userProfile.getAchievements + `\n`;
     wikiContents += `---\n\n`;
 
-    wikiContents += `## 📜 Recent Awards\n\n`;
-    wikiContents += userProfile.getRecentAwards + `\n\n`;
+    wikiContents += `## 📜 Recent Awards\n`;
+    wikiContents += userProfile.getRecentAwards + `\n`;
     wikiContents += `---\n\n`;
 
-    wikiContents += `## 📊 Point History\n\n`;
-    wikiContents += userProfile.getPointHistory + `\n\n`;
+    wikiContents += `## 📊 Point History\n`;
+    wikiContents += userProfile.getPointHistory + `\n`;
     wikiContents += `---\n\n`;
 
     wikiContents += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
