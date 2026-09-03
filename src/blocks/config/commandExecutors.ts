@@ -180,6 +180,7 @@ export async function executeProfileCommand(
     if (symbol) {
         wikiContents += `## ${symbol} Reputation\n\n`;
         wikiContents += (await getProfileReputation(user, context)) + `\n\n`;
+        wikiContents += `---\n\n`;
     } else {
         wikiContents += `## Reputation\n\n`;
         wikiContents += (await getProfileReputation(user, context)) + `\n\n`;
