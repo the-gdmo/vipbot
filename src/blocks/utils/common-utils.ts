@@ -802,6 +802,21 @@ export async function recipientIsBot(
     }
 }
 
+export function commentContainsCommandWithUserMention(user: User, prefix: string, command: string, commentBody: string) {
+const userCommandRegex = new RegExp(
+            `^${prefix}${command}\\s+u/
+                ${user.username}`,
+            "i"
+        );
+
+        return userCommandRegex.test(commentBody);
+}
+
+export function commentContainsCommand(prefix: string, command: string, commentBody: string) {
+    const commandRegex = new RegExp(`${prefix}${command}`, "i");
+
+    return commandRegex.test(commentBody)
+}
 export async function setUserScoreOnPostSubmit(
     event: PostSubmit,
     context: TriggerContext,

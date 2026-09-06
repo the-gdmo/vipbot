@@ -4,10 +4,11 @@ import {
 import { onPostSubmit } from "./handlers/postSubmit";
 import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/installEvents";
 import { Devvit } from "@devvit/public-api";
-import { CLEANUP_JOB, UPDATE_MODINFO_JOB } from "./config/constants";
+import { CLEANUP_JOB, UPDATE_BOT_FLAIR_JOB, UPDATE_MODINFO_JOB } from "./config/constants";
 import { cleanupDeletedAccounts } from "./jobs/cleanup";
 import { modInfoJob } from "./jobs/modInfo";
 import { onCommentSubmit } from "./handlers/commentSubmit";
+import { botFlairJob } from "./handlers/users";
 
 /**
  *
@@ -69,6 +70,11 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
     name: UPDATE_MODINFO_JOB,
     onRun: modInfoJob,
+})
+
+Devvit.addSchedulerJob({
+    name: UPDATE_BOT_FLAIR_JOB,
+    onRun: botFlairJob,
 })
 
 // ─────────────────────────────────────────────────────────────

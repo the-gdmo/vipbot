@@ -2,9 +2,11 @@ import { TriggerContext } from "@devvit/public-api";
 import { AppInstall, AppUpgrade } from "@devvit/protos";
 import { populateCleanupLogAndScheduleCleanup } from "../jobs/cleanup";
 import {
+    BOT_FLAIR_CRON,
     CLEANUP_JOB,
     CLEANUP_JOB_CRON,
     MODINFO_CRON,
+    UPDATE_BOT_FLAIR_JOB,
     UPDATE_MODINFO_JOB,
     // UPGRADE_NOTIFIER_CRON,
     // UPGRADE_NOTIFIER_JOB,
@@ -33,6 +35,10 @@ export async function onAppInstallOrUpgrade(
     await context.scheduler.runJob({
         name: UPDATE_MODINFO_JOB,
         cron: MODINFO_CRON,
+    });
+    await context.scheduler.runJob({
+        name: UPDATE_BOT_FLAIR_JOB,
+        cron: BOT_FLAIR_CRON,
     });
     // await context.scheduler.runJob({
     //     name: UPGRADE_NOTIFIER_JOB,

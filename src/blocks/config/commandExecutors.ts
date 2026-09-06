@@ -150,7 +150,6 @@ export async function executeUserRankCommand(
     user: User
 ) {
     logger.info("🏆 Executing USER RANK command", {
-        requester: user.username,
         target: user.username,
     });
 
@@ -171,33 +170,41 @@ export async function executeProfileCommand(
     const settings = await context.settings.getAll();
     const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
     const userProfile = new UserProfile(user, context);
-    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n`;
-
+    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n\n`;
+    const vipPoints = userProfile.getVipPoints();
+    const subredditRank =userProfile.getSubRank();
+    const pointsGiven = userProfile.getVipPointsGiven();
+    const pointsReceived = userProfile.getVipPointsReceived();
+    const currentLevel = userProfile.getCurrentUserLevel();
+    const nextLevel = userProfile.getNextUserLevel();
+    const xpToNextLevel = userProfile.getXpToNextLevel();
+    
     if (symbol) {
-        wikiContents += `## ${symbol} Reputation\n`;
-        wikiContents += userProfile.getReputation + `\n`;
-        wikiContents += `---\n\n`;
+        wikiContents += `## ${symbol} Reputation\n\n`;
+        wikiContents += userProfile.getReputation(vipPoints, subredditRank, pointsGiven, pointsReceived, currentLevel, nextLevel, xpToNextLevel) + `\n\n`;
+        wikiContents += `---\n\n\n`;
     } else {
-        wikiContents += `## Reputation\n`;
-        wikiContents += userProfile.getReputation + `\n`;
-        wikiContents += `---\n\n`;
+        wikiContents += `## Reputation\n\n`;
+                wikiContents += userProfile.getReputation(vipPoints, subredditRank, pointsGiven, pointsReceived, currentLevel, nextLevel, xpToNextLevel) + `\n\n`;
+
+        wikiContents += `---\n\n\n`;
     }
 
-    wikiContents += `## 📈 Progress\n`;
-    wikiContents += userProfile.getProgress + `\n`;
-    wikiContents += `---\n\n`;
+    wikiContents += `## 📈 Progress\n\n`;
+    wikiContents += userProfile.getProgress(currentLevel, vipPoints, nextLevel, xpToNextLevel) + `\n\n`;
+    wikiContents += `---\n\n\n`;
 
-    wikiContents += `## 🥇 Achievements\n`;
-    wikiContents += userProfile.getAchievements + `\n`;
-    wikiContents += `---\n\n`;
+    wikiContents += `## 🥇 Achievements\n\n`;
+    wikiContents += userProfile.getAchievements() + `\n\n`;
+    wikiContents += `---\n\n\n`;
 
-    wikiContents += `## 📜 Recent Awards\n`;
-    wikiContents += userProfile.getRecentAwards + `\n`;
-    wikiContents += `---\n\n`;
+    wikiContents += `## 📜 Recent Awards\n\n`;
+    wikiContents += userProfile.getRecentAwards() + `\n\n`;
+    wikiContents += `---\n\n\n`;
 
-    wikiContents += `## 📊 Point History\n`;
-    wikiContents += userProfile.getPointHistory + `\n`;
-    wikiContents += `---\n\n`;
+    wikiContents += `## 📊 Point History\n\n`;
+    wikiContents += userProfile.getPointHistory + `\n\n`;
+    wikiContents += `---\n\n\n`;
 
     wikiContents += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
         .getTime()

@@ -7,7 +7,7 @@ export class UserProfile {
         private readonly context: TriggerContext
     ) {}
 
-    async setVipPoints(value: number): Promise<void> {
+    async setVipPoints(value: Promise<number>): Promise<void> {
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
 
         await this.context.redis.set(userVipPointsKey, value.toString());
@@ -20,7 +20,7 @@ export class UserProfile {
         return points ? Number(points) : 0;
     }
 
-    async setSubRank(value: number): Promise<void> {
+    async setSubRank(value: Promise<number>): Promise<void> {
         const key = `userProfile:${this.user.username}:subRank`;
 
         await this.context.redis.set(key, value.toString());
@@ -34,13 +34,13 @@ export class UserProfile {
     }
 
     async setReputation(value: {
-        vipPoints: number;
-        subredditRank: number;
-        vipPointsGiven: number;
-        vipPointsReceived: number;
-        currentLevel: number;
-        nextLevel: number;
-        xpToNextLevel: number;
+        vipPoints: Promise<number>;
+        subredditRank: Promise<number>;
+        vipPointsGiven: Promise<number>;
+        vipPointsReceived: Promise<number>;
+        currentLevel: Promise<number>;
+        nextLevel: Promise<number>;
+        xpToNextLevel: Promise<number>;
     }): Promise<void> {
         await Promise.all([
             this.setVipPoints(value.vipPoints),
@@ -53,58 +53,34 @@ export class UserProfile {
         ]);
     }
 
-    async getReputation() {
-        const [
-            vipPoints,
-            subredditRank,
-            vipPointsGiven,
-            vipPointsReceived,
-            currentLevel,
-            nextLevel,
-            xpToNextLevel,
-        ] = await Promise.all([
-            this.getVipPoints(),
-            this.getSubRank(),
-            this.getVipPointsGiven(),
-            this.getVipPointsReceived(),
-            this.getCurrentUserLevel(),
-            this.getNextUserLevel(),
-            this.getXpToNextLevel(),
-        ]);
+    async getReputation(vipPoints: Promise<number>, subredditRank: Promise<number>, pointsGiven: Promise<number>, pointsReceived: Promise<number>, currentLevel: Promise<number>, nextLevel: any, xpToNextLevel: Promise<number>) {
 
         return {
             vipPoints,
             subredditRank,
-            vipPointsGiven,
-            vipPointsReceived,
+            pointsGiven,
+            pointsReceived,
             currentLevel,
             nextLevel,
             xpToNextLevel,
         };
     }
 
-    async setProgress(value: {
-        currentLevel: number;
-        vipPoints: number;
-        nextLevel: number;
-        xpToNextLevel: number;
-    }): Promise<void> {
+    async setProgress(
+        currentLevel: Promise<number>,
+        vipPoints: Promise<number>,
+        nextLevel: Promise<number>,
+        xpToNextLevel: Promise<number>,
+    ): Promise<void> {
         await Promise.all([
-            this.setCurrentUserLevel(value.currentLevel),
-            this.setVipPoints(value.vipPoints),
-            this.setNextUserLevel(value.nextLevel),
-            this.setXpToNextLevel(value.xpToNextLevel),
+            this.setCurrentUserLevel(currentLevel),
+            this.setVipPoints(vipPoints),
+            this.setNextUserLevel(nextLevel),
+            this.setXpToNextLevel(xpToNextLevel),
         ]);
     }
 
-    async getProgress() {
-        const [currentLevel, vipPoints, nextLevel, xpToNextLevel] =
-            await Promise.all([
-                this.getCurrentUserLevel(),
-                this.getVipPoints(),
-                this.getNextUserLevel(),
-                this.getXpToNextLevel(),
-            ]);
+    async getProgress(currentLevel: Promise<number>, vipPoints: Promise<number>, nextLevel: Promise<number>, xpToNextLevel: Promise<number>) {
 
         return {
             currentLevel,
@@ -114,7 +90,7 @@ export class UserProfile {
         };
     }
 
-    async setAchievements(value: string[]): Promise<void> {
+    async setAchievements(value: Promise<string>): Promise<void> {
         const key = `userProfile:${this.user.username}:achievements`;
 
         await this.context.redis.set(key, JSON.stringify(value));
@@ -139,7 +115,7 @@ export class UserProfile {
         value: {
             date: string;
             awardedBy: string;
-            points: number;
+            points: Promise<number>;
         }[]
     ): Promise<void> {
         const key = `userProfile:${this.user.username}:recentAwards`;
@@ -151,7 +127,7 @@ export class UserProfile {
         {
             date: string;
             awardedBy: string;
-            points: number;
+            points: Promise<number>;
         }[]
     > {
         const key = `userProfile:${this.user.username}:recentAwards`;
@@ -165,7 +141,7 @@ export class UserProfile {
             return JSON.parse(awards) as {
                 date: string;
                 awardedBy: string;
-                points: number;
+                points: Promise<number>;
             }[];
         } catch {
             return [];
@@ -173,11 +149,11 @@ export class UserProfile {
     }
 
     async setPointHistory(value: {
-        today: number;
-        thisWeek: number;
-        thisMonth: number;
-        thisYear: number;
-        allTime: number;
+        today: Promise<number>;
+        thisWeek: Promise<number>;
+        thisMonth: Promise<number>;
+        thisYear: Promise<number>;
+        allTime: Promise<number>;
     }): Promise<void> {
         const key = `userProfile:${this.user.username}:pointHistory`;
 
@@ -200,11 +176,11 @@ export class UserProfile {
 
         try {
             return JSON.parse(history) as {
-                today: number;
-                thisWeek: number;
-                thisMonth: number;
-                thisYear: number;
-                allTime: number;
+                today: Promise<number>;
+                thisWeek: Promise<number>;
+                thisMonth: Promise<number>;
+                thisYear: Promise<number>;
+                allTime: Promise<number>;
             };
         } catch {
             return {
@@ -217,7 +193,7 @@ export class UserProfile {
         }
     }
 
-    async setVipPointsReceived(value: number): Promise<void> {
+    async setVipPointsReceived(value: Promise<number>): Promise<void> {
         const key = `userProfile:${this.user.username}:vipPointsReceived`;
 
         await this.context.redis.set(key, value.toString());
@@ -230,7 +206,7 @@ export class UserProfile {
         return value ? Number(value) : 0;
     }
 
-    async setVipPointsGiven(value: number): Promise<void> {
+    async setVipPointsGiven(value: Promise<number>): Promise<void> {
         const key = `userProfile:${this.user.username}:vipPointsGiven`;
 
         await this.context.redis.set(key, value.toString());
@@ -243,7 +219,7 @@ export class UserProfile {
         return value ? Number(value) : 0;
     }
 
-    async setCurrentUserLevel(value: number): Promise<void> {
+    async setCurrentUserLevel(value: Promise<number>): Promise<void> {
         const key = `userProfile:${this.user.username}:currentLevel`;
 
         await this.context.redis.set(key, value.toString());
@@ -256,7 +232,7 @@ export class UserProfile {
         return value ? Number(value) : 0;
     }
 
-    async setNextUserLevel(value: number): Promise<number> {
+    async setNextUserLevel(value: Promise<number>): Promise<number> {
         const key = `userProfile:${this.user.username}:nextLevel`;
 
         await this.context.redis.set(key, value.toString());
@@ -271,7 +247,7 @@ export class UserProfile {
         return value ? Number(value) : 0;
     }
 
-    async setXpToNextLevel(value: number): Promise<void> {
+    async setXpToNextLevel(value: Promise<number>): Promise<void> {
         const key = `userProfile:${this.user.username}:xpToNextLevel`;
 
         await this.context.redis.set(key, value.toString());

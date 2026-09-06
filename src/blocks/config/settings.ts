@@ -72,9 +72,11 @@ export enum AppSetting {
     CommentIncrement = "commentIncrement",
     NewPostMessage = "newPostMessage",
     InfoMessageConfirmation = "infoMessageConfirmation",
-    DMInfoMessage = "DMInfoMessage",
+    DMInfoMessage = "dmInfoMessage",
     HelpMessageConfirmation = "helpMessageConfirmation",
-    DMHelpMessage = "DMHelpMessage",
+    DMHelpMessage = "dmHelpMessage",
+    BotFlairTextColor = "botFlairTextColor",
+    BotFlairBackgroundColor = "botFlairBackgroundColor",
 }
 
 export enum TemplateDefaults {
@@ -130,6 +132,8 @@ export enum TemplateDefaults {
         "`{prefix}vipremove u/<username>`\n\n`{prefix}setxp u/<username> <amount>`\n\n`{prefix}setcoins u/<username> <amount>`\n\n" +
         "`{prefix}setrep u/<username> <amount>`\n\nand\n\n`{prefix}setlevel u/<username> <level>`",
     HelpMessageConfirmation = "I just sent you a dm with all the info about the commands that you have access to with me.",
+    BotFlairTextColor = "light",
+    BotFlairBackgroundColor = "#00AA00",
 }
 
 export enum AutoSuperuserReplyOptions {
@@ -800,38 +804,6 @@ export const appSettings: SettingsFormField[] = [
     },
     {
         type: "group",
-        label: "Points Setting Options",
-        fields: [
-            {
-                name: AppSetting.ExistingFlairHandling,
-                type: "select",
-                label: "Flair setting option",
-                helpText:
-                    "If using a symbol, it must be set in the Point Symbol box",
-                options: ExistingFlairHandlingOptionChoices,
-                multiSelect: false,
-                defaultValue: [ExistingFlairOverwriteHandling.OverwriteNumeric],
-                onValidate: selectFieldHasOptionChosen,
-            },
-            {
-                name: AppSetting.CSSClass,
-                type: "string",
-                label: "CSS class to use for points flairs",
-                helpText:
-                    "Optional. Please choose either a CSS class or flair template, not both",
-            },
-            {
-                name: AppSetting.FlairTemplate,
-                type: "string",
-                label: "Flair template ID to use for points flairs",
-                helpText:
-                    "Optional. Please choose either a CSS class or flair template, not both",
-                onValidate: isFlairTemplateValid,
-            },
-        ],
-    },
-    {
-        type: "group",
         label: "Moderator/Trusted User Settings",
         fields: [
             {
@@ -928,6 +900,69 @@ export const appSettings: SettingsFormField[] = [
                     "Optional. Placeholders Supported: awarder, awardee, name",
                 defaultValue: TemplateDefaults.ModAwardAlreadyGivenMessage,
                 onValidate: stringOrParagraphFieldContainsText,
+            },
+        ],
+    },
+    {
+        type: "group",
+        label: "Points Setting Options",
+        fields: [
+            {
+                name: AppSetting.ExistingFlairHandling,
+                type: "select",
+                label: "Flair setting option",
+                helpText:
+                    "If using a symbol, it must be set in the Point Symbol box",
+                options: ExistingFlairHandlingOptionChoices,
+                multiSelect: false,
+                defaultValue: [ExistingFlairOverwriteHandling.OverwriteNumeric],
+                onValidate: selectFieldHasOptionChosen,
+            },
+            {
+                name: AppSetting.CSSClass,
+                type: "string",
+                label: "CSS class to use for points flairs",
+                helpText:
+                    "Optional. Please choose either a CSS class or flair template, not both",
+            },
+            {
+                name: AppSetting.FlairTemplate,
+                type: "string",
+                label: "Flair template ID to use for points flairs",
+                helpText:
+                    "Optional. Please choose either a CSS class or flair template, not both",
+                onValidate: isFlairTemplateValid,
+            },
+        ],
+    },
+    {
+        type: "group",
+        label: "Bot Management Settings",
+        fields: [
+            {
+                type: "string",
+                name: AppSetting.BotFlairBackgroundColor,
+                label: "Bot Flair Background Color",
+                helpText: "Must be a valid hex id (eg #00AA00)",
+                defaultValue: "#00AA00",
+                onValidate: flairHexIsValid,
+            },
+            {
+                type: "select",
+                name: AppSetting.BotFlairTextColor,
+                label: "Bot Flair Text Color",
+                options: [
+                    {
+                        label: "White Text",
+                        value: "light",
+                    },
+                    {
+                        label: "Black Text",
+                        value: "dark",
+                    },
+                ],
+                defaultValue: ["light"],
+                onValidate: selectFieldHasOptionChosen,
             },
         ],
     },
@@ -1163,7 +1198,7 @@ function selectFieldHasOptionChosen(
     event: SettingsFormFieldValidatorEvent<string[]>
 ) {
     if (!event.value || event.value.length !== 1) {
-        return "You must choose an option (even if this is an irrelevant setting)";
+        return "You must choose an option";
     }
 }
 
@@ -1172,37 +1207,34 @@ export function numberFieldHasValidOption(
     event: SettingsFormFieldValidatorEvent<number>
 ) {
     if (typeof event.value !== "number" || isNaN(event.value)) {
-        return "Value must be a number.";
+        return "Value must be a number";
     }
 
     if (event.value < 0) {
-        return "Value must be greater than 0.";
+        return "Value must be greater than 0";
     }
 }
 
 function stringOrParagraphFieldContainsText(
     event: SettingsFormFieldValidatorEvent<string>,
     _context: TriggerContext
-): string | void {
+) {
     if (typeof event.value !== "string") {
-        return "Value must be a string.";
+        return "Value must be a string";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting).";
+        return "Field cannot be empty";
     }
 }
 
-function levelThresholdIsValid(
-    event: SettingsFormFieldValidatorEvent<string>,
-    _: TriggerContext
-): string | void {
+function levelThresholdIsValid(event: SettingsFormFieldValidatorEvent<string>) {
     if (typeof event.value !== "string") {
-        return "Value must be a string.";
+        return "Value must be a string";
     }
 
     if (event.value.length === 0) {
-        return "Field cannot be empty (even if this is an irrelevant setting).";
+        return "Field cannot be empty";
     }
 
     const lines = event.value.split("\n").map((line) => line.trim());
@@ -1213,5 +1245,19 @@ function levelThresholdIsValid(
     const levelThresholdRegex = /^(\d+)\|(\d+)\|(.+)$/;
     if (!lines.every((line) => levelThresholdRegex.test(line))) {
         return `Each level threshold must be formatted as "<level>|<points>|<rankName>" with no spaces before or after the bar`;
+    }
+}
+
+function flairHexIsValid(event: SettingsFormFieldValidatorEvent<string>) {
+    if (typeof event.value !== "string") {
+        return "Value must be a string.";
+    }
+
+    if (event.value.length === 0) {
+        return "Field cannot be empty";
+    }
+
+    if (!/^#[0-9a-f]{6}$/i.test(event.value)) {
+        return `Field must contain a valid hex value (# is required)`;
     }
 }
