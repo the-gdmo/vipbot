@@ -650,7 +650,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (userRankCommand) {
-            await executeUserRankCommand();
+            await executeUserRankCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -658,7 +658,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (rankCommand) {
-            await executeRankCommand();
+            await executeRankCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -666,7 +666,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (balanceCommand) {
-            await executeBalanceCommand();
+            await executeBalanceCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -674,7 +674,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (achievementsCommand) {
-            executeAchievementCommand();
+            executeAchievementCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -682,7 +682,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (xpLeaderboardCommand) {
-            await executeXPLeaderboardCommand();
+            await executeXPLeaderboardCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -690,7 +690,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (coinLeaderboardCommand) {
-            await executeCoinLeaderboardCommand();
+            await executeCoinLeaderboardCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -698,7 +698,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (repLeaderboardCommand) {
-            await executeRepLeaderboardCommand();
+            await executeRepLeaderboardCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -706,7 +706,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (leaderboardCommand) {
-            await executeLeaderboardCommand();
+            await executeLeaderboardCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -714,7 +714,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (streakCommand) {
-            await executeStreakCommand();
+            await executeStreakCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -722,7 +722,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (vipsCommand) {
-            await executeVIPCommand();
+            await executeVIPCommand(event, context, user);
         }
 
         // --------------------------------------------------------
@@ -730,7 +730,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (nominateCommand) {
-            await executeNominateCommand();
+            await executeNominateCommand(event, context, user, isMod);
         }
 
         // --------------------------------------------------------
@@ -738,27 +738,27 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
 
         if (giftPointsCommand) {
-            await executeGiftPointsCommand();
+            await executeGiftPointsCommand(event, context, user, bodySplit);
         }
 
         if (vipAddDaysCommand) {
-            await executeVIPAddDaysCommand();
+            await executeVIPAddDaysCommand(event, context, user, bodySplit);
         }
 
         if (setXpCommand) {
-            await executeSetXPCommand();
+            await executeSetXPCommand(event, context, user, bodySplit);
         }
 
         if (setCoinsCommand) {
-            await executeSetCoinsCommand();
+            await executeSetCoinsCommand(event, context, user, bodySplit);
         }
 
         if (setRepCommand) {
-            await executeSetReputationCommand();
+            await executeSetReputationCommand(event, context, user, bodySplit);
         }
 
         if (setLevelCommand) {
-            await executeSetLevelCommand();   
+            await executeSetLevelCommand(event, context, user, bodySplit);   
         }
 
         logger.warn("⚠️ Comment was detected but no handler matched", {

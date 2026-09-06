@@ -339,7 +339,7 @@ export async function executeGiftPointsCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("🎁 Executing GIFT command", {
         user: user.username,
@@ -353,7 +353,7 @@ export async function executeVIPAddDaysCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("👑 Executing VIPADD command", {
         user: user.username,
@@ -367,7 +367,7 @@ export async function executeSetXPCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("✨ Executing SETXP command", {
         user: user.username,
@@ -381,7 +381,7 @@ export async function executeSetCoinsCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("🪙 Executing SETCOINS command", {
         user: user.username,
@@ -395,7 +395,7 @@ export async function executeSetReputationCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("⭐ Executing SETREP command", {
         user: user.username,
@@ -409,7 +409,7 @@ export async function executeSetLevelCommand(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     user: User,
-    bodySplit: string
+    bodySplit: string[]
 ) {
     logger.info("📈 Executing SETLEVEL command", {
         user: user.username,
