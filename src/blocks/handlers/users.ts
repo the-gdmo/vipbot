@@ -57,7 +57,7 @@ export async function botFlairJob(
     // Apply the flair to the bot account
     await context.reddit.setUserFlair({
         subredditName,
-        username: context.appName,
+        username: context.appSlug,
         text: flairText,
         textColor,
         backgroundColor,
