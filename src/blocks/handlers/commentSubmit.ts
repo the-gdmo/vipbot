@@ -18,7 +18,28 @@ import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { isModerator } from "../config/commentTriggerContext";
-import { executeAchievementCommand, executeBalanceCommand, executeCoinLeaderboardCommand, executeGiftPointsCommand, executeHelpCommand, executeInfoCommand, executeLeaderboardCommand, executeNominateCommand, executeProfileCommand, executeRankCommand, executeRepLeaderboardCommand, executeSetCoinsCommand, executeSetLevelCommand, executeSetReputationCommand, executeSetXPCommand, executeStreakCommand, executeUserRankCommand, executeVIPAddDaysCommand, executeVIPCommand, executeXPLeaderboardCommand } from "../config/commandExecutors";
+import {
+    executeAchievementCommand,
+    executeBalanceCommand,
+    executeCoinLeaderboardCommand,
+    executeGiftPointsCommand,
+    executeHelpCommand,
+    executeInfoCommand,
+    executeLeaderboardCommand,
+    executeNominateCommand,
+    executeProfileCommand,
+    executeRankCommand,
+    executeRepLeaderboardCommand,
+    executeSetCoinsCommand,
+    executeSetLevelCommand,
+    executeSetReputationCommand,
+    executeSetXPCommand,
+    executeStreakCommand,
+    executeUserRankCommand,
+    executeVIPAddDaysCommand,
+    executeVIPCommand,
+    executeXPLeaderboardCommand,
+} from "../config/commandExecutors";
 
 /**
  * Handles newly submitted comments.
@@ -758,7 +779,7 @@ export async function onCommentSubmit(
         }
 
         if (setLevelCommand) {
-            await executeSetLevelCommand(event, context, user, bodySplit);   
+            await executeSetLevelCommand(event, context, user, bodySplit);
         }
 
         logger.warn("⚠️ Comment was detected but no handler matched", {
