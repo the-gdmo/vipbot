@@ -5,7 +5,6 @@ import {
     ExistingFlairOverwriteHandling,
     NotifyOnDisallowedFlairReplyOptions,
     NotifyOnSelfAwardReplyOptions,
-    NotifyOnSuccessReplyOptions,
     NotifyOnUnflairedPostReplyOptions,
     TemplateDefaults,
 } from "../config/settings";
@@ -18,7 +17,6 @@ import {
 import { POINTS_STORE_KEY } from "../config/constants";
 import { CommentSubmit, CommentUpdate, PostSubmit } from "@devvit/protos";
 import { setCleanupForUsers } from "../jobs/cleanup";
-import { flairToggleKeyExists } from "../database/redis";
 import { formatFlair, formatMessage } from "./formatting";
 import { buildInitialUserWiki, SafeWikiClient } from "../jobs/leaderboard";
 import { getLevelFromScore, getRankFromScore } from "../database/levels";
@@ -313,7 +311,23 @@ export async function userHasPermission(
 
     const pointName = (settings[AppSetting.PointName] as string) ?? "point";
 
-    const isMod = await isModerator(context, context.subredditName, awarderID);
+    let user: User | undefined;
+
+    try {
+        user = await context.reddit.getUserByUsername(awarderName);
+    } catch {
+        //
+    }
+
+    if (!user) {
+        logger.error(`User not found in userHasPermission(), returning.`);
+        return false;
+    }
+    const isMod = await isModerator(
+        context,
+        context.subredditName,
+        user.username
+    );
     const isSuperUser = await getUserIsSuperuser(context, awarderID);
     const isOP = awarderID === event.post.authorId;
 
@@ -628,139 +642,6 @@ export async function selfAwardAttemptLogic(
     }
 }
 
-/**
- * Awards a point to a normal user and performs all success side-effects.
- */
-export async function awardPointToUserNormalCommand(
-    event: CommentSubmit | CommentUpdate,
-    context: TriggerContext,
-    awarder: string,
-    recipient: User | undefined,
-    increment: number
-) {
-    const parentComment = await getParentComment(event, context);
-    if (!parentComment || !event.subreddit || !event.comment || !event.post)
-        return;
-
-    const awardee = parentComment.authorName;
-    const settings = await context.settings.getAll();
-    const awardKey = `userCommand:${recipient?.username}-${event.comment.id}`;
-
-    // Mark as awarded
-    await context.redis.set(awardKey, "1");
-
-    if (!recipient) {
-        logger.warn("❌ Recipient user not found", {
-            awardee,
-            awarder,
-        });
-        return;
-    }
-
-    const existingScore = await getCurrentScore(recipient, context);
-
-    if (!existingScore) {
-        logger.warn("❌ Could not retrieve existing score for user", {
-            awardee,
-            awarder,
-        });
-        return;
-    }
-
-    const newScore: ScoreResult = {
-        score: existingScore.score + increment,
-        userHasFlair: existingScore.userHasFlair,
-        flairIsNumber: existingScore.flairIsNumber,
-    };
-
-    const pointName = (settings[AppSetting.PointName] as string) ?? "point";
-    const pointSymbol = (settings[AppSetting.PointSymbol] as string) ?? "";
-    const notifySuccess =
-        (settings[AppSetting.NotifyOnSuccess] as string[])?.[0] ??
-        NotifyOnSuccessReplyOptions.NoReply;
-
-    const leaderboard = `https://old.reddit.com/r/${
-        event.subreddit.name
-    }/wiki/${settings[AppSetting.LeaderboardName] ?? "leaderboard"}`;
-
-    const awardeePage = `https://old.reddit.com/r/${event.subreddit.name}/wiki/user/${recipient.username}`;
-    const awarderPage = `https://old.reddit.com/r/${event.subreddit.name}/wiki/user/${awarder}`;
-
-    const successMessage = formatMessage(
-        event,
-        (settings[AppSetting.SuccessMessage] as string) ??
-            TemplateDefaults.NotifyOnNormalAwardSuccessTemplate,
-        {
-            awardee,
-            awarder,
-            total: newScore.score.toString(),
-            name: pointName,
-            symbol: pointSymbol,
-            leaderboard,
-            awardeePage,
-            awarderPage,
-        }
-    );
-
-    if (notifySuccess === NotifyOnSuccessReplyOptions.ReplyByPM) {
-        await Promise.all([
-            context.reddit.sendPrivateMessage({
-                to: awarder,
-                subject: `You awarded a ${pointName}`,
-                text: successMessage,
-            }),
-            context.reddit.sendPrivateMessage({
-                to: awardee,
-                subject: `You were awarded a ${pointName}`,
-                text: successMessage,
-            }),
-        ]);
-    } else if (notifySuccess === NotifyOnSuccessReplyOptions.ReplyAsComment) {
-        const commandSuccessMessage = await context.reddit.submitComment({
-            id: event.comment.id,
-            text: successMessage,
-        });
-        await commandSuccessMessage.distinguish();
-    }
-
-    let user: User | undefined;
-
-    try {
-        user = await context.reddit.getUserByUsername(awarder);
-    } catch {
-        user = undefined;
-    }
-    if (!user) return;
-
-    logger.info(`✅ Awarded 1 point to ${recipient.username} from ${awarder}`, {
-        newScore,
-    });
-
-    let userObj: User | undefined;
-
-    try {
-        userObj = await context.reddit.getUserByUsername(awardee);
-    } catch {}
-
-    if (!userObj) {
-        logger.error(
-            "Failed to fetch user for flair update after normal award"
-        );
-        return;
-    }
-
-    const flairHandlingDisabled = await flairToggleKeyExists(context, userObj);
-
-    if (flairHandlingDisabled) {
-        logger.info(
-            "Flair handling is disabled for this user, skipping flair update"
-        );
-        return;
-    }
-
-    setUserScoreOnCommentSubmit(event, context, awardee, newScore, settings);
-}
-
 export async function recipientIsBot(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
@@ -802,20 +683,29 @@ export async function recipientIsBot(
     }
 }
 
-export function commentContainsCommandWithUserMention(user: User, prefix: string, command: string, commentBody: string) {
-const userCommandRegex = new RegExp(
-            `^${prefix}${command}\\s+u/
+export function commentContainsCommandWithUserMention(
+    user: User,
+    prefix: string,
+    command: string,
+    commentBody: string
+) {
+    const userCommandRegex = new RegExp(
+        `^${prefix}${command}\\s+u/
                 ${user.username}`,
-            "i"
-        );
+        "i"
+    );
 
-        return userCommandRegex.test(commentBody);
+    return userCommandRegex.test(commentBody);
 }
 
-export function commentContainsCommand(prefix: string, command: string, commentBody: string) {
+export function commentContainsCommand(
+    prefix: string,
+    command: string,
+    commentBody: string
+) {
     const commandRegex = new RegExp(`${prefix}${command}`, "i");
 
-    return commandRegex.test(commentBody)
+    return commandRegex.test(commentBody);
 }
 export async function setUserScoreOnPostSubmit(
     event: PostSubmit,
@@ -1072,7 +962,7 @@ export async function setUserScoreOnCommentSubmit(
         let flairTemplate = appSettings[AppSetting.FlairTemplate] as
             | string
             | undefined;
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+
         if (!flairTemplate) {
             flairTemplate = undefined;
         }

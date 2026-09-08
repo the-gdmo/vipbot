@@ -3,9 +3,7 @@ import { formatMessage } from "../utils/formatting";
 import { logger } from "../utils/logger";
 import { AppSetting, TemplateDefaults } from "./settings";
 import { TriggerContext, User } from "@devvit/public-api";
-import {
-    UserProfile,
-} from "./userProfile";
+import { UserProfile } from "./userProfile";
 
 export async function executeInfoCommand(
     event: CommentSubmit | CommentUpdate,
@@ -149,10 +147,20 @@ export async function executeUserRankCommand(
     context: TriggerContext,
     user: User
 ) {
+    if (!event.comment) return;
     logger.info("🏆 Executing USER RANK command", {
         target: user.username,
     });
 
+    //user specific
+    let userRankMessage: string = `# u/${user.username}'s VIPBot Rank\n\n`;
+
+    const userRankComment = await context.reddit.submitComment({
+        id: event.comment.id,
+        text: userRankMessage,
+    });
+
+    userRankComment.distinguish();
     return;
 }
 
@@ -162,7 +170,6 @@ export async function executeProfileCommand(
     user: User
 ) {
     logger.info("👤 Executing PROFILE command", {
-        user: user.username,
     });
 
     if (!event.comment || !event.author) return;
@@ -170,43 +177,160 @@ export async function executeProfileCommand(
     const settings = await context.settings.getAll();
     const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
     const userProfile = new UserProfile(user, context);
-    let wikiContents: string = `# u/${user.username}'s VIPBot Profile\n\n`;
+    let userProfileMessage: string = `# u/${user.username}'s VIPBot Profile\n\n`;
     const vipPoints = userProfile.getVipPoints();
-    const subredditRank =userProfile.getSubRank();
+    const subredditRank = userProfile.getSubRank();
     const pointsGiven = userProfile.getVipPointsGiven();
     const pointsReceived = userProfile.getVipPointsReceived();
     const currentLevel = userProfile.getCurrentUserLevel();
     const nextLevel = userProfile.getNextUserLevel();
     const xpToNextLevel = userProfile.getXpToNextLevel();
-    
-    if (symbol) {
-        wikiContents += `## ${symbol} Reputation\n\n`;
-        wikiContents += userProfile.getReputation(vipPoints, subredditRank, pointsGiven, pointsReceived, currentLevel, nextLevel, xpToNextLevel) + `\n\n`;
-        wikiContents += `---\n\n\n`;
-    } else {
-        wikiContents += `## Reputation\n\n`;
-                wikiContents += userProfile.getReputation(vipPoints, subredditRank, pointsGiven, pointsReceived, currentLevel, nextLevel, xpToNextLevel) + `\n\n`;
 
-        wikiContents += `---\n\n\n`;
+    if (symbol) {
+        userProfileMessage += `## ${symbol} Reputation\n\n`;
+        userProfileMessage +=
+            userProfile.getReputation(
+                vipPoints,
+                subredditRank,
+                pointsGiven,
+                pointsReceived,
+                currentLevel,
+                nextLevel,
+                xpToNextLevel
+            ) + `\n\n`;
+        userProfileMessage += `---\n\n\n`;
+    } else {
+        userProfileMessage += `## Reputation\n\n`;
+        userProfileMessage +=
+            userProfile.getReputation(
+                vipPoints,
+                subredditRank,
+                pointsGiven,
+                pointsReceived,
+                currentLevel,
+                nextLevel,
+                xpToNextLevel
+            ) + `\n\n`;
+
+        userProfileMessage += `---\n\n\n`;
     }
 
-    wikiContents += `## 📈 Progress\n\n`;
-    wikiContents += userProfile.getProgress(currentLevel, vipPoints, nextLevel, xpToNextLevel) + `\n\n`;
-    wikiContents += `---\n\n\n`;
+    userProfileMessage += `## 📈 Progress\n\n`;
+    userProfileMessage +=
+        userProfile.getProgress(
+            currentLevel,
+            vipPoints,
+            nextLevel,
+            xpToNextLevel
+        ) + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
 
-    wikiContents += `## 🥇 Achievements\n\n`;
-    wikiContents += userProfile.getAchievements() + `\n\n`;
-    wikiContents += `---\n\n\n`;
+    userProfileMessage += `## 🥇 Achievements\n\n`;
+    userProfileMessage += userProfile.getAchievements() + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
 
-    wikiContents += `## 📜 Recent Awards\n\n`;
-    wikiContents += userProfile.getRecentAwards() + `\n\n`;
-    wikiContents += `---\n\n\n`;
+    userProfileMessage += `## 📜 Recent Awards\n\n`;
+    userProfileMessage += userProfile.getRecentAwards() + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
 
-    wikiContents += `## 📊 Point History\n\n`;
-    wikiContents += userProfile.getPointHistory + `\n\n`;
-    wikiContents += `---\n\n\n`;
+    userProfileMessage += `## 📊 Point History\n\n`;
+    userProfileMessage += userProfile.getPointHistory + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
 
-    wikiContents += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
+    userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
+        .getTime()
+        .toString()}*`;
+    return;
+}
+
+export async function executeUserProfileCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    targetObj: string
+) {
+    let target: User | undefined;
+
+    try {
+        target = await context.reddit.getUserByUsername(targetObj);
+    } catch {
+
+    }
+
+    if (!target) {
+        logger.error(`Couldn't find target for executeUserProfileCommand()`);
+        return;
+    }
+
+    logger.info("👤 Executing PROFILE command", {
+        user: target.username,
+    });
+
+    if (!event.comment || !event.author) return;
+
+    const settings = await context.settings.getAll();
+    const symbol = (settings[AppSetting.PointSymbol] as string) ?? "";
+    const targetProfile = new UserProfile(target, context);
+    let userProfileMessage: string = `# u/${target.username}'s VIPBot Profile\n\n`;
+    const vipPoints = targetProfile.getVipPoints();
+    const subredditRank = targetProfile.getSubRank();
+    const pointsGiven = targetProfile.getVipPointsGiven();
+    const pointsReceived = targetProfile.getVipPointsReceived();
+    const currentLevel = targetProfile.getCurrentUserLevel();
+    const nextLevel = targetProfile.getNextUserLevel();
+    const xpToNextLevel = targetProfile.getXpToNextLevel();
+
+    if (symbol) {
+        userProfileMessage += `## ${symbol} Reputation\n\n`;
+        userProfileMessage +=
+            targetProfile.getReputation(
+                vipPoints,
+                subredditRank,
+                pointsGiven,
+                pointsReceived,
+                currentLevel,
+                nextLevel,
+                xpToNextLevel
+            ) + `\n\n`;
+        userProfileMessage += `---\n\n\n`;
+    } else {
+        userProfileMessage += `## Reputation\n\n`;
+        userProfileMessage +=
+            targetProfile.getReputation(
+                vipPoints,
+                subredditRank,
+                pointsGiven,
+                pointsReceived,
+                currentLevel,
+                nextLevel,
+                xpToNextLevel
+            ) + `\n\n`;
+
+        userProfileMessage += `---\n\n\n`;
+    }
+
+    userProfileMessage += `## 📈 Progress\n\n`;
+    userProfileMessage +=
+        targetProfile.getProgress(
+            currentLevel,
+            vipPoints,
+            nextLevel,
+            xpToNextLevel
+        ) + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
+
+    userProfileMessage += `## 🥇 Achievements\n\n`;
+    userProfileMessage += targetProfile.getAchievements() + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
+
+    userProfileMessage += `## 📜 Recent Awards\n\n`;
+    userProfileMessage += targetProfile.getRecentAwards() + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
+
+    userProfileMessage += `## 📊 Point History\n\n`;
+    userProfileMessage += targetProfile.getPointHistory + `\n\n`;
+    userProfileMessage += `---\n\n\n`;
+
+    userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
         .getTime()
         .toString()}*`;
     return;

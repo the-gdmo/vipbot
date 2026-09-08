@@ -20,13 +20,22 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         return;
     }
 
+    if (
+        ["automoderator", context.appSlug.toLowerCase()].includes(
+            event.author.name.toLowerCase()
+        )
+    ) {
+        logger.debug("❌ Poster is bot, returning.");
+        return;
+    }
+
     const settings = await context.settings.getAll();
     const prefix = (settings[AppSetting.CommandPrefix] as string) ?? "/";
     const newPostMessage = formatMessage(
         event,
         (settings[AppSetting.NewPostMessage] as string) ??
             TemplateDefaults.NewPostMessage,
-        { prefix },
+        { prefix }
     );
 
     const newPostComment = await context.reddit.submitComment({
@@ -75,7 +84,7 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
             context,
             originalPoster.username,
             awarderScore,
-            settings,
+            settings
         );
 
         logger.info(`Completed running setUserScoreOnPostSubmit()`);
@@ -128,6 +137,6 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
         context,
         user.username,
         newScore,
-        settings,
+        settings
     );
 }

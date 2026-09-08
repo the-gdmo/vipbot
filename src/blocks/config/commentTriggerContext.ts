@@ -7,24 +7,29 @@ import { getCurrentScore } from "../utils/common-utils";
 export const isModerator = async (
     context: TriggerContext,
     subName: string,
-    awarder: string,
+    awarder: string
 ) => {
     const filteredModeratorList = await context.reddit
         .getModerators({ subredditName: subName, username: awarder })
         .all();
+
+    logger.info(`Filtered modlist`, {
+        list: filteredModeratorList,
+        length: filteredModeratorList.length,
+    })
     return filteredModeratorList.length > 0;
 };
 
 export async function getUserIsSuperuser(
     context: TriggerContext,
-    awarder: string,
+    awarder: string
 ) {
     const settings = await context.settings.getAll();
 
     const VIPUserSetting =
         (settings[AppSetting.VIPUsers] as string | undefined) ?? "";
     const superUsers = VIPUserSetting.split(",").map((user) =>
-        user.trim().toLowerCase(),
+        user.trim().toLowerCase()
     );
 
     if (superUsers.includes(awarder.toLowerCase())) {
@@ -60,7 +65,7 @@ export async function _replyToUser(
     toUserName: string,
     messageBody: string,
     commentId: string,
-    replyMode: string,
+    replyMode: string
 ) {
     if (replyMode === "none") return;
 
@@ -77,7 +82,7 @@ export async function _replyToUser(
             console.log(`${commentId}: PM sent to ${toUserName}.`);
         } catch {
             console.log(
-                `${commentId}: Error sending PM to ${toUserName}. User may only allow PMs from whitelisted users.`,
+                `${commentId}: Error sending PM to ${toUserName}. User may only allow PMs from whitelisted users.`
             );
         }
     } else if (replyMode === "replybycomment") {
@@ -97,7 +102,7 @@ export async function _replyToUser(
         });
         await Promise.all([newComment.distinguish()]);
         console.log(
-            `${commentId}: Public comment reply left for ${toUserName}`,
+            `${commentId}: Public comment reply left for ${toUserName}`
         );
     } else {
         console.warn(`${commentId}: Unknown replyMode "${replyMode}"`);
@@ -106,13 +111,13 @@ export async function _replyToUser(
 
 export async function getParentComment(
     event: CommentSubmit | CommentUpdate,
-    context: TriggerContext,
+    context: TriggerContext
 ): Promise<Comment | undefined> {
     let parentComment: Comment | undefined;
     if (!event.comment) return undefined;
     try {
         parentComment = await context.reddit.getCommentById(
-            event.comment.parentId,
+            event.comment.parentId
         );
         return parentComment;
     } catch {

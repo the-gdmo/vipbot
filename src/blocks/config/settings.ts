@@ -51,7 +51,6 @@ export enum AppSetting {
     NotifyOnSelfAward = "notifyOnSelfAward",
     SelfAwardMessage = "selfAwardMessage",
     NotifyOnSuccess = "notifyOnSuccess",
-    SuccessMessage = "successMessage",
     NotifyUsersWhoCannotAwardPoints = "notifyUsersWhoCannotAwardPoints",
     NotifyOnBlockedUser = "notifyOnBlockedUser",
     NotifyOnBotAward = "notifyOnBotAward",
@@ -92,8 +91,6 @@ export enum TemplateDefaults {
     SelfAwardMessage = "You can't award yourself a {name}.",
     BotAwardMessage = "You can't award u/{awardee} {name}s.",
     SelfAwardTemplate = "Hello {awarder}, you cannot award a {name} to yourself.",
-    NotifyOnNormalAwardSuccessTemplate = "+1 {name} awarded to u/{awardee} by u/{awarder}. " +
-        "Total: {total}{symbol}. {awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
     NotifyOnSuperuserTemplate = "Hello {awardee},\n\n" +
         "Now that you have reached {threshold} points you can now award points yourself, " +
         "even if normal users do not have permission to. Please use the command `{command}` if you'd like to do this.",
@@ -546,33 +543,19 @@ export enum ExistingFlairOverwriteHandling {
     NeverSet = "neverset",
 }
 
-const ExistingFlairHandlingOptionChoices = [
-    {
-        label: "Set flair to new score, if flair unset or flair is numeric (With Symbol)",
-        value: ExistingFlairOverwriteHandling.OverwriteNumericSymbol,
-    },
-    {
-        label: "Set flair to new score, if flair unset or flair is numeric (Without Symbol)",
-        value: ExistingFlairOverwriteHandling.OverwriteNumeric,
-    },
-    {
-        label: "Never set flair",
-        value: ExistingFlairOverwriteHandling.NeverSet,
-    },
-];
-
 export const appSettings: SettingsFormField[] = [
     {
         type: "group",
         label: "Point System Settings",
         fields: [
             {
-                type: "string",
-                name: AppSetting.CommandPrefix,
-                label: "Command Prefix",
-                helpText: `What all commands should start with (eg "/")`,
-                defaultValue: "/",
-                onValidate: stringOrParagraphFieldContainsText,
+                type: "select",
+                name: AppSetting.AccessControl,
+                label: "Who can award points?",
+                helpText: "Choose who is allowed to award points",
+                options: AccessControlOptionChoices,
+                defaultValue: [AccessControlOptions.ModsAndVIPS],
+                onValidate: selectFieldHasOptionChosen,
             },
             {
                 type: "paragraph",
@@ -583,13 +566,27 @@ export const appSettings: SettingsFormField[] = [
                 onValidate: levelThresholdIsValid,
             },
             {
-                type: "select",
-                name: AppSetting.AccessControl,
-                label: "Who can award points?",
-                helpText: "Choose who is allowed to award points",
-                options: AccessControlOptionChoices,
-                defaultValue: [AccessControlOptions.ModsAndVIPS],
-                onValidate: selectFieldHasOptionChosen,
+                type: "string",
+                name: AppSetting.CommandPrefix,
+                label: "Command Prefix",
+                helpText: `What all commands should start with (eg "/")`,
+                defaultValue: "/",
+                onValidate: stringOrParagraphFieldContainsText,
+            },
+            {
+                name: AppSetting.CSSClass,
+                type: "string",
+                label: "CSS class to use for points flairs",
+                helpText:
+                    "Optional. Please choose either a CSS class or flair template, not both",
+            },
+            {
+                name: AppSetting.FlairTemplate,
+                type: "string",
+                label: "Flair template ID to use for points flairs",
+                helpText:
+                    "Optional. Please choose either a CSS class or flair template, not both",
+                onValidate: isFlairTemplateValid,
             },
             {
                 type: "number",
@@ -905,38 +902,6 @@ export const appSettings: SettingsFormField[] = [
     },
     {
         type: "group",
-        label: "Points Setting Options",
-        fields: [
-            {
-                name: AppSetting.ExistingFlairHandling,
-                type: "select",
-                label: "Flair setting option",
-                helpText:
-                    "If using a symbol, it must be set in the Point Symbol box",
-                options: ExistingFlairHandlingOptionChoices,
-                multiSelect: false,
-                defaultValue: [ExistingFlairOverwriteHandling.OverwriteNumeric],
-                onValidate: selectFieldHasOptionChosen,
-            },
-            {
-                name: AppSetting.CSSClass,
-                type: "string",
-                label: "CSS class to use for points flairs",
-                helpText:
-                    "Optional. Please choose either a CSS class or flair template, not both",
-            },
-            {
-                name: AppSetting.FlairTemplate,
-                type: "string",
-                label: "Flair template ID to use for points flairs",
-                helpText:
-                    "Optional. Please choose either a CSS class or flair template, not both",
-                onValidate: isFlairTemplateValid,
-            },
-        ],
-    },
-    {
-        type: "group",
         label: "Bot Management Settings",
         fields: [
             {
@@ -1011,16 +976,6 @@ export const appSettings: SettingsFormField[] = [
                 options: NotifyOnSuccessReplyOptionChoices,
                 defaultValue: [NotifyOnSuccessReplyOptions.ReplyAsComment],
                 onValidate: selectFieldHasOptionChosen,
-            },
-            {
-                type: "paragraph",
-                name: AppSetting.SuccessMessage,
-                label: "Normal Award Success Message (All placeholders allow single or double curly braces)",
-                helpText:
-                    "Message when a point is awarded. Placeholders Supported: awardeePage, awarderPage, awardee, awarder, symbol, total, name, leaderboard",
-                defaultValue:
-                    TemplateDefaults.NotifyOnNormalAwardSuccessTemplate,
-                onValidate: stringOrParagraphFieldContainsText,
             },
             {
                 type: "select",
@@ -1188,7 +1143,7 @@ export const appSettings: SettingsFormField[] = [
 ];
 
 function isFlairTemplateValid(event: SettingsFormFieldValidatorEvent<string>) {
-    const flairTemplateRegex = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){4}[0-9a-f]{8}$/gi;
+    const flairTemplateRegex = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/gi;
     if (event.value && !flairTemplateRegex.test(event.value)) {
         return "Invalid flair template ID";
     }

@@ -415,7 +415,6 @@ NOTE: All placeholders are case-insensitive.
 * `place`: The user's leaderboard position.
 * `streak`: The user's current activity streak.
 * `vip`: Whether the user currently has VIP status.
-
 ### VIP Information
 
 * `vipStatus`: The user's current VIP status.
@@ -633,7 +632,7 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 ## Version History
 ### 1.0.0
 * Bring the bot into an up-and-running state
-* List all placeholders in the README
+* List all current placeholders in README
 * Update README to list all features that exist currently
 * Import [RepBot](https://github.com/the-gdmo/TheRepBot) code
 * Create VIPBot

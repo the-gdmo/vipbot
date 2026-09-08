@@ -35,6 +35,7 @@ import {
     executeSetReputationCommand,
     executeSetXPCommand,
     executeStreakCommand,
+    executeUserProfileCommand,
     executeUserRankCommand,
     executeVIPAddDaysCommand,
     executeVIPCommand,
@@ -112,8 +113,29 @@ export async function onCommentSubmit(
     const pointName = (settings[AppSetting.PointName] as string) ?? "point";
 
     const commentBody = event.comment.body.trim();
-    const awarder = event.author.name;
+    const commentAuthor = event.author.name;
     const recipient = parentComment.authorName;
+
+    // The bot should be able to run through the normal comment handler,
+    // including command processing, but it must never receive the automatic
+    // comment-increment points.
+    const normalizedCommentAuthor = commentAuthor.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+
+    if (isBotUser) {
+        logger.debug(
+            "🤖 Comment author is the bot — skipping only the automatic point award.",
+            {
+                commentAuthor,
+                botName: context.appSlug,
+            }
+        );
+        return;
+    }
 
     // ============================================================
     // USER
@@ -123,17 +145,17 @@ export async function onCommentSubmit(
 
     try {
         logger.debug("👤 Looking up author", {
-            username: awarder,
+            username: commentAuthor,
         });
 
-        user = await context.reddit.getUserByUsername(awarder);
+        user = await context.reddit.getUserByUsername(commentAuthor);
 
         logger.debug("✅ Author lookup successful", {
             username: user?.username,
         });
     } catch (err) {
         logger.warn("⚠️ Failed to look up author", {
-            username: awarder,
+            username: commentAuthor,
             err,
         });
 
@@ -142,7 +164,7 @@ export async function onCommentSubmit(
 
     if (!user) {
         logger.warn("❌ Author could not be resolved", {
-            awarder,
+            commentAuthor,
         });
 
         return;
@@ -152,7 +174,7 @@ export async function onCommentSubmit(
         prefix,
         increment,
         pointName,
-        awarder,
+        commentAuthor,
         recipient,
         commentBody,
     });
@@ -224,14 +246,14 @@ export async function onCommentSubmit(
         .filter(Boolean);
 
     logger.debug("🚫 Checking blocked-user list", {
-        awarder,
+        commentAuthor,
         blockedUsers,
-        isBlocked: blockedUsers.includes(awarder),
+        isBlocked: blockedUsers.includes(commentAuthor),
     });
 
-    if (blockedUsers.includes(awarder)) {
+    if (blockedUsers.includes(commentAuthor)) {
         logger.warn("🚫 User is blocked from awarding points", {
-            awarder,
+            commentAuthor,
             recipient,
             subreddit: event.subreddit.name,
         });
@@ -246,12 +268,12 @@ export async function onCommentSubmit(
 
         const blockedMessage = formatMessage(event, blockedTemplate, {
             name: pointName,
-            awarder,
+            commentAuthor,
             subreddit: event.subreddit.name,
         });
 
         logger.debug("📨 Sending blocked-user notification", {
-            awarder,
+            commentAuthor,
             mode: notifyBlockedUserMode,
         });
 
@@ -267,13 +289,13 @@ export async function onCommentSubmit(
             await message.distinguish();
 
             logger.info("💬 Posted blocked-user response", {
-                awarder,
+                commentAuthor,
             });
         } else if (
             notifyBlockedUserMode === NotifyOnBlockedUserReplyOptions.ReplyByPM
         ) {
             await context.reddit.sendPrivateMessage({
-                to: awarder,
+                to: commentAuthor,
                 text: blockedMessage,
                 subject:
                     `You do not have permission to award ${pointName}s ` +
@@ -281,7 +303,7 @@ export async function onCommentSubmit(
             });
 
             logger.info("📨 Sent blocked-user PM", {
-                awarder,
+                commentAuthor,
             });
         }
 
@@ -292,9 +314,16 @@ export async function onCommentSubmit(
     // COMMENT INCREMENT COMMAND REQUIREMENT
     // ============================================================
 
-    if (increment !== 0) {
+    const incrementedKey = `incremented:${user.username}:${parentComment.id}`;
+    const incrementedKeyExists = await context.redis.exists(incrementedKey);
+
+    if (increment !== 0 && !isBotUser) {
+        await context.redis.set(incrementedKey, "1");
+
         logger.debug("🔢 Comment increment is enabled", {
             increment,
+            incrementedKey,
+            incrementedKeyExists,
         });
 
         const currentScore = await getCurrentScore(user, context);
@@ -316,15 +345,20 @@ export async function onCommentSubmit(
             newScore,
             settings
         );
+    } else if (isBotUser) {
+        logger.debug("🤖 Automatic comment-increment skipped for bot.", {
+            commentAuthor,
+            increment,
+        });
     }
 
     // ============================================================
     // SELF AWARD
     // ============================================================
 
-    if (awarder === recipient) {
+    if (commentAuthor === recipient && !incrementedKeyExists) {
         logger.warn("🛑 Self-award attempt detected", {
-            awarder,
+            commentAuthor,
             recipient,
             commentId: event.comment.id,
         });
@@ -334,7 +368,7 @@ export async function onCommentSubmit(
             (settings[AppSetting.SelfAwardMessage] as string) ??
                 TemplateDefaults.SelfAwardMessage,
             {
-                awarder,
+                awarder: commentAuthor,
                 name: pointName,
             }
         );
@@ -355,20 +389,20 @@ export async function onCommentSubmit(
             await selfAwardComment.distinguish();
 
             logger.info("💬 Posted self-award warning", {
-                awarder,
+                commentAuthor,
             });
         } else if (
             notifyNormalSelfAwardMode ===
             NotifyOnSelfAwardReplyOptions.ReplyByPM
         ) {
             await context.reddit.sendPrivateMessage({
-                to: awarder,
+                to: commentAuthor,
                 text: selfAwardTemplate,
                 subject: `You tried to award yourself a ${pointName}`,
             });
 
             logger.info("📨 Sent self-award warning via PM", {
-                awarder,
+                commentAuthor,
             });
         }
 
@@ -396,7 +430,7 @@ export async function onCommentSubmit(
 
     if (alreadyAwarded) {
         logger.warn("⚠️ Point already awarded", {
-            awarder,
+            commentAuthor,
             recipient,
             key,
         });
@@ -406,7 +440,7 @@ export async function onCommentSubmit(
             (settings[AppSetting.PointAlreadyAwardedToUserMessage] as string) ??
                 TemplateDefaults.PointAlreadyAwardedToUserMessage,
             {
-                awarder,
+                commentAuthor,
                 awardee: recipient,
                 name: pointName,
             }
@@ -428,7 +462,7 @@ export async function onCommentSubmit(
             await message.distinguish();
 
             logger.info("💬 Posted duplicate-award response", {
-                awarder,
+                commentAuthor,
                 recipient,
             });
         } else if (
@@ -436,7 +470,7 @@ export async function onCommentSubmit(
             NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyByPM
         ) {
             await context.reddit.sendPrivateMessage({
-                to: awarder,
+                to: commentAuthor,
                 subject:
                     `[This comment](${parentComment.permalink}) ` +
                     `has already received a ${pointName}`,
@@ -444,7 +478,7 @@ export async function onCommentSubmit(
             });
 
             logger.info("📨 Sent duplicate-award PM", {
-                awarder,
+                commentAuthor,
                 recipient,
             });
         }
@@ -495,6 +529,7 @@ export async function onCommentSubmit(
     const streakCommand = commandRegex("streak").test(commentBody);
     const vipsCommand = commandRegex("vips").test(commentBody);
 
+    const userProfileCommand = userCommandRegex("profile").test(commentBody);
     const userRankCommand = userCommandRegex("rank").test(commentBody);
     const nominateCommand = userCommandRegex("nominate").test(commentBody);
 
@@ -547,7 +582,7 @@ export async function onCommentSubmit(
 
     if (!hasPermission) {
         logger.debug("❌ User does not have permission to use commands", {
-            awarder,
+            commentAuthor,
             commentId: event.comment.id,
         });
         return;
@@ -572,7 +607,7 @@ export async function onCommentSubmit(
 
         const threeArgRegex = (commandName: string): RegExp =>
             new RegExp(
-                `^${prefix}${commandName}\\s+u/${user.username}\\s+${thirdArg}$`,
+                `^${prefix}${commandName}\\s+u/${target}\\s+${thirdArg}$`,
                 "i"
             );
 
@@ -752,6 +787,24 @@ export async function onCommentSubmit(
 
         if (nominateCommand) {
             await executeNominateCommand(event, context, user, isMod);
+        }
+
+        // --------------------------------------------------------
+        // TWO-ARGUMENT COMMANDS
+        // --------------------------------------------------------
+        if (bodySplit.length === 2) {
+            const target = bodySplit[1];
+
+            if (!target) {
+                logger.error(`Target object not found, returning.`, { target });
+                return;
+            }
+            // --------------------------------------------------------
+            // USER PROFILE
+            // --------------------------------------------------------
+            if (userProfileCommand) {
+                await executeUserProfileCommand(event, context, target);
+            }
         }
 
         // --------------------------------------------------------
