@@ -53,8 +53,6 @@ export enum AppSetting {
     NotifyOnSuccess = "notifyOnSuccess",
     NotifyUsersWhoCannotAwardPoints = "notifyUsersWhoCannotAwardPoints",
     NotifyOnBlockedUser = "notifyOnBlockedUser",
-    NotifyOnBotAward = "notifyOnBotAward",
-    BotAwardMessage = "botAwardMessage",
     LeaderboardMode = "leaderboardMode",
     DiscordServerLink = "discordServerLink",
     LeaderboardName = "leaderboardName",
@@ -76,6 +74,7 @@ export enum AppSetting {
     DMHelpMessage = "dmHelpMessage",
     BotFlairTextColor = "botFlairTextColor",
     BotFlairBackgroundColor = "botFlairBackgroundColor",
+    UserProfileSentMessage = "userProfileSentMessage",
 }
 
 export enum TemplateDefaults {
@@ -89,11 +88,9 @@ export enum TemplateDefaults {
     ModOnlyDisallowedMessage = "Only moderators allowed to award points.",
     ApprovedOnlyDisallowedMessage = "Only moderators and approved users can award points.",
     SelfAwardMessage = "You can't award yourself a {name}.",
-    BotAwardMessage = "You can't award u/{awardee} {name}s.",
     SelfAwardTemplate = "Hello {awarder}, you cannot award a {name} to yourself.",
-    NotifyOnSuperuserTemplate = "Hello {awardee},\n\n" +
-        "Now that you have reached {threshold} points you can now award points yourself, " +
-        "even if normal users do not have permission to. Please use the command `{command}` if you'd like to do this.",
+    AutoSuperuserTemplate = "Hello {awardee},\n\n" +
+        "Now that you have reached {threshold} points you can now use all commands yourself, even if normal users do not have permission to.",
     InitialMessageToRestrictedUsers = "***ATTENTION to OP:*** You must award at least {requirement} {name}s by replying to the successful comments." +
         " Valid command(s) are {commandsWithAnd}. Failure to do so may result in a ban.\n\n" +
         "*^ To hide text, write it like this `>!Text goes here!<` = >!Text goes here!<. [Reddit Markdown Guide]({markdownGuide})*.",
@@ -112,7 +109,7 @@ export enum TemplateDefaults {
         "{awardee}'s user page is located [here]({awardeePage}). Leaderboard is located [here]({leaderboard}).",
     ModsAndPostAuthorDisallowedMessage = "Only moderators and Post Authors (OPs) can award {name}s.",
     UserPointsInitializedMessage = "Your {name} points have been initialized to 1. [Message the mods]({modmailLink}) if you have any questions.",
-    NewPostMessage = "Hello.\n\nTo all commenters/OP, if this is your first time experiencing u/vipbot2, " +
+    NewPostMessage = "To all commentors/OP, if this is your first time experiencing u/vipbot2, " +
         "use `{prefix}info` to get information in your dms about how to use this bot.\n\n***NOTE: All commands are case-insensitive.***",
     DMInfoMessage = "Hey u/{username}!\n\nI see you are curious as to how to use me in r/{subreddit}.\n\n" +
         "Please use the `{prefix}help` command on [the post you used this on]({permalink}) to get another message listing all usable bot commands.",
@@ -125,12 +122,12 @@ export enum TemplateDefaults {
     ModDMHelpMessage = "The commands available to you are:\n\n`{prefix}info`\n\n" +
         "`{prefix}help`\n\n`{prefix}profile`\n\n`{prefix}rank [u/<username>]`\n\n`{prefix}balance`\n\n" +
         "`{prefix}achievements`\n\n`{prefix}leaderboard [xp|coins|rep]`\n\n`{prefix}streak`\n\n`{prefix}vips`\n\n" +
-        "`{prefix}nominate u/<username>`\n\n`{prefix}gift u/<username> <amount>`\n\n`{prefix}vipadd u/<username> [days]`\n\n" +
-        "`{prefix}vipremove u/<username>`\n\n`{prefix}setxp u/<username> <amount>`\n\n`{prefix}setcoins u/<username> <amount>`\n\n" +
-        "`{prefix}setrep u/<username> <amount>`\n\nand\n\n`{prefix}setlevel u/<username> <level>`",
+        "`{prefix}nominate u/<username>`\n\n`{prefix}gift u/<username> <amount>`\n\n" +
+        "Additionally, [you can set various user statistics in the mod menu of posts or comments by users](https://imgur.com/gallery/u-vipbot2-mod-menu-options-pJ6WEjK).",
     HelpMessageConfirmation = "I just sent you a dm with all the info about the commands that you have access to with me.",
     BotFlairTextColor = "light",
     BotFlairBackgroundColor = "#00AA00",
+    UserProfileSentMessage = "I just sent you a dm with {target}'s VIP Bot profile info.",
 }
 
 export enum AutoSuperuserReplyOptions {
@@ -373,27 +370,6 @@ const NotifyUsersWhoCannotAwardPointsReplyOptionChoices = [
     {
         label: "Reply as comment",
         value: NotifyUsersWhoCannotAwardPointsReplyOptions.ReplyAsComment,
-    },
-];
-
-export enum NotifyOnBotAwardReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-const NotifyOnBotAwardReplyOptionChoices = [
-    {
-        label: "No Notification",
-        value: NotifyOnBotAwardReplyOptions.NoReply,
-    },
-    {
-        label: "Send user a private message",
-        value: NotifyOnBotAwardReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnBotAwardReplyOptions.ReplyAsComment,
     },
 ];
 
@@ -815,7 +791,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify users who reach the auto trusted user threshold",
                 options: NotifyOnAutoSuperuserReplyOptionChoices,
                 multiSelect: false,
-                defaultValue: [AutoSuperuserReplyOptions.ReplyAsComment],
+                defaultValue: [AutoSuperuserReplyOptions.ReplyByPM],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -824,6 +800,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Treat users with this many points as automatically a trusted user",
                 helpText:
                     "If zero, only explicitly named users above will be treated as trusted users",
+                defaultValue: 0,
                 onValidate: numberFieldHasValidOption,
             },
             {
@@ -831,7 +808,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.AutoSuperuserTemplate,
                 label: "Message sent when a user reaches the trusted user threshold (All placeholders allow single or double curly braces)",
                 helpText: "Placeholders Supported: name, threshold, command",
-                defaultValue: TemplateDefaults.NotifyOnSuperuserTemplate,
+                defaultValue: TemplateDefaults.AutoSuperuserTemplate,
                 onValidate: stringOrParagraphFieldContainsText,
             },
             {
@@ -969,14 +946,14 @@ export const appSettings: SettingsFormField[] = [
                 defaultValue: TemplateDefaults.SelfAwardTemplate,
                 onValidate: stringOrParagraphFieldContainsText,
             },
-            {
-                type: "select",
-                name: AppSetting.NotifyOnSuccess,
-                label: "Notify users when a point is awarded successfully",
-                options: NotifyOnSuccessReplyOptionChoices,
-                defaultValue: [NotifyOnSuccessReplyOptions.ReplyAsComment],
-                onValidate: selectFieldHasOptionChosen,
-            },
+            // {
+            //     type: "select",
+            //     name: AppSetting.NotifyOnSuccess,
+            //     label: "Notify users when a point is awarded successfully",
+            //     options: NotifyOnSuccessReplyOptionChoices,
+            //     defaultValue: [NotifyOnSuccessReplyOptions.ReplyAsComment],
+            //     onValidate: selectFieldHasOptionChosen,
+            // },
             {
                 type: "select",
                 name: AppSetting.NotifyUsersWhoCannotAwardPoints,
@@ -1008,23 +985,6 @@ export const appSettings: SettingsFormField[] = [
                 label: "User Cannot Award Points Message (All placeholders allow single or double curly braces)",
                 helpText: `Message shown when a user specified in the "Users Who Cannot Award Points" setting tries to award points but is not allowed to. Placeholders Supported: name`,
                 defaultValue: TemplateDefaults.UsersWhoCannotAwardPointsMessage,
-                onValidate: stringOrParagraphFieldContainsText,
-            },
-            {
-                type: "select",
-                name: AppSetting.NotifyOnBotAward,
-                label: "Notify a user if they try to award the bot",
-                options: NotifyOnBotAwardReplyOptionChoices,
-                defaultValue: [NotifyOnBotAwardReplyOptions.ReplyAsComment],
-                onValidate: selectFieldHasOptionChosen,
-            },
-            {
-                type: "paragraph",
-                name: AppSetting.BotAwardMessage,
-                label: "Bot Award Message (All placeholders allow single or double curly braces)",
-                helpText:
-                    "Message shown when someone tries to award the bot. Placeholders Supported: name, awardee",
-                defaultValue: TemplateDefaults.BotAwardMessage,
                 onValidate: stringOrParagraphFieldContainsText,
             },
         ],
@@ -1143,7 +1103,8 @@ export const appSettings: SettingsFormField[] = [
 ];
 
 function isFlairTemplateValid(event: SettingsFormFieldValidatorEvent<string>) {
-    const flairTemplateRegex = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/gi;
+    const flairTemplateRegex =
+        /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/gi;
     if (event.value && !flairTemplateRegex.test(event.value)) {
         return "Invalid flair template ID";
     }

@@ -44,7 +44,6 @@ export async function onPostSubmit(event: PostSubmit, context: TriggerContext) {
     });
 
     newPostComment.distinguish(true);
-    newPostComment.lock();
 
     const increment = (settings[AppSetting.PostIncrement] as number) ?? 0;
     const awarder = event.author.name;

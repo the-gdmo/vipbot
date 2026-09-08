@@ -328,7 +328,7 @@ export async function userHasPermission(
         context.subredditName,
         user.username
     );
-    const isSuperUser = await getUserIsSuperuser(context, awarderID);
+    const isSuperUser = await getUserIsSuperuser(event, context, awarderID);
     const isOP = awarderID === event.post.authorId;
 
     const accessControl = ((settings[AppSetting.AccessControl] as string[]) ?? [
@@ -642,47 +642,6 @@ export async function selfAwardAttemptLogic(
     }
 }
 
-export async function recipientIsBot(
-    event: CommentSubmit | CommentUpdate,
-    context: TriggerContext,
-    awarder: string,
-    recipient: string,
-    settings: SettingsValues
-) {
-    if (!event.comment) return;
-    const pointName = (settings[AppSetting.PointName] as string) ?? "point";
-    if (
-        ["automoderator", context.appSlug.toLowerCase()].includes(
-            awarder.toLowerCase()
-        )
-    ) {
-        logger.debug("❌ System user attempted a command");
-        return;
-    }
-
-    if (
-        ["automoderator", context.appSlug.toLowerCase()].includes(
-            recipient.toLowerCase()
-        )
-    ) {
-        // Prevent bot account or Automod granting points
-        const botAwardMessage = formatMessage(
-            event,
-            (settings[AppSetting.BotAwardMessage] as string) ??
-                TemplateDefaults.BotAwardMessage,
-            { name: pointName, awardee: recipient }
-        );
-
-        const awardGivenToBotMessage = await context.reddit.submitComment({
-            id: event.comment.id,
-            text: botAwardMessage,
-        });
-        await awardGivenToBotMessage.distinguish();
-        logger.debug("❌ Bot cannot award itself points");
-        return;
-    }
-}
-
 export function commentContainsCommandWithUserMention(
     user: User,
     prefix: string,
@@ -718,7 +677,6 @@ export async function setUserScoreOnPostSubmit(
     // Queue user for cleanup checks in 24 hours, overwriting existing value.
     await setCleanupForUsers([username], context);
     const settings = await context.settings.getAll();
-    const OP = event.author.name;
 
     const existingFlairOverwriteHandling =
         (appSettings[AppSetting.ExistingFlairHandling] as
@@ -882,7 +840,200 @@ export async function setUserScoreOnPostSubmit(
             return;
         }
 
-        await recipientIsBot(event, context, OP, OP, settings);
+
+        logger.info("Setting user flair", {
+            username,
+            newScore: newScore.score,
+            cssClass,
+            flairTemplate,
+            flairText,
+            subreddit: context.subredditName,
+        });
+
+        await context.reddit.setUserFlair({
+            subredditName: context.subredditName,
+            username,
+            cssClass,
+            flairTemplateId: flairTemplate,
+            text: flairText,
+        });
+    } else {
+        console.log(
+            `${username}: Flair not set (option disabled or flair in wrong state)`
+        );
+    }
+}
+
+export async function setUserScore(
+    context: TriggerContext,
+    username: string,
+    newScore: ScoreResult,
+    appSettings: SettingsValues
+) {
+    // Queue user for cleanup checks in 24 hours, overwriting existing value.
+    await setCleanupForUsers([username], context);
+    const settings = await context.settings.getAll();
+
+    const existingFlairOverwriteHandling =
+        (appSettings[AppSetting.ExistingFlairHandling] as
+            | ExistingFlairOverwriteHandling
+            | undefined) ?? ExistingFlairOverwriteHandling.OverwriteNumeric;
+
+    let shouldSetUserFlair: boolean | undefined;
+    if (
+        existingFlairOverwriteHandling ===
+            ExistingFlairOverwriteHandling.OverwriteNumericSymbol ||
+        existingFlairOverwriteHandling ===
+            ExistingFlairOverwriteHandling.OverwriteNumeric
+    ) {
+        shouldSetUserFlair = true;
+    } else if (
+        existingFlairOverwriteHandling ===
+        ExistingFlairOverwriteHandling.NeverSet
+    ) {
+        shouldSetUserFlair = false;
+    } else {
+        shouldSetUserFlair = !newScore.userHasFlair || newScore.flairIsNumber;
+    }
+
+    if (shouldSetUserFlair) {
+        console.log(
+            `Setting points flair for ${username}. New score: ${newScore.score}`
+        );
+
+        let cssClass = appSettings[AppSetting.CSSClass] as string | undefined;
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        if (!cssClass) {
+            cssClass = undefined;
+        }
+
+        let flairTemplate = appSettings[AppSetting.FlairTemplate] as
+            | string
+            | undefined;
+
+        if (!flairTemplate) {
+            flairTemplate = undefined;
+        }
+
+        if (flairTemplate && cssClass) {
+            // Prioritise flair templates over CSS classes.
+            cssClass = undefined;
+        }
+
+        const flairTextTemplate = "{points}";
+
+        if (!context.subredditName) {
+            logger.error(
+                "❌ No subreddit name found in context, cannot set user flair"
+            );
+            return;
+        }
+
+        const key = `flairToggle:${username}`;
+        const exists = await context.redis.exists(key);
+
+        const flairFormatting =
+            (appSettings[AppSetting.FlairFormatting] as string) ??
+            TemplateDefaults.FlairFormatting;
+
+        const redisKey = POINTS_STORE_KEY;
+        const leaderboard = await context.redis.zRange(redisKey, 0, -1, {
+            by: "rank",
+            reverse: true,
+        });
+
+        const index = leaderboard.findIndex(
+            (member) => member.member === username
+        );
+
+        const userRank = index >= 0 ? index + 1 : undefined;
+        if (!userRank) {
+            logger.error(`Couldn't find user's rank`, {
+            });
+            return;
+        }
+        const flairText = formatFlair(flairFormatting, {
+            place: userRank > 0 ? `${userRank}` : "0",
+            total: newScore.score.toString(),
+            symbol: appSettings[AppSetting.PointSymbol] as string,
+            level: (
+                await getLevelFromScore(context, username, newScore.score)
+            ).toString(),
+            rank: await getRankFromScore(context, username, newScore.score),
+        });
+
+        const shouldIncrementOnCommentSubmit =
+            (settings[AppSetting.CommentIncrement] as number) ?? 0;
+        if (shouldIncrementOnCommentSubmit < 0) {
+            logger.info("Setting user flair", {
+                username,
+                newScore: newScore.score,
+                cssClass,
+                flairTemplate,
+                flairText,
+                subreddit: context.subredditName,
+            });
+
+            await context.reddit.setUserFlair({
+                subredditName: context.subredditName,
+                username,
+                cssClass,
+                flairTemplateId: flairTemplate,
+                text: flairText,
+            });
+            logger.info(`Updating user's flair`, { flairText });
+            return;
+        }
+
+        if (exists) {
+            logger.debug("❌ Flair should not be set, skipping", {
+                username,
+                newScore: newScore.score,
+                cssClass,
+                flairTemplate,
+                flairTextTemplate,
+                subreddit: context.subredditName,
+            });
+            return;
+        }
+
+        logger.debug("User leaderboard rank", {
+            username,
+            rank: userRank,
+            totalUsers: leaderboard.length,
+        });
+
+        logger.debug("Checking values", {
+            userRank,
+            newScore: newScore.score,
+        });
+
+        if (!userRank) {
+            logger.error(`userRank not found, returning.`);
+            return;
+        }
+
+        let user: User | undefined;
+
+        try {
+            user = await context.reddit.getUserByUsername(username);
+        } catch {
+            //
+        }
+
+        if (!user) {
+            logger.error(`No user found, returning.`);
+            return;
+        }
+
+        const currentScore = await getCurrentScore(user, context);
+
+        if (!currentScore) {
+            logger.error(`No current score found for user, returning.`, {
+                user,
+            });
+            return;
+        }
 
         logger.info("Setting user flair", {
             username,
@@ -919,7 +1070,6 @@ export async function setUserScoreOnCommentSubmit(
     // Queue user for cleanup checks in 24 hours, overwriting existing value.
     await setCleanupForUsers([username], context);
     const settings = await context.settings.getAll();
-    const awarder = event.author.name;
     const awardee = parentComment.authorName;
     if (!awardee) {
         logger.warn("❌ No recipient found", { parentComment });
@@ -1088,13 +1238,6 @@ export async function setUserScoreOnCommentSubmit(
             return;
         }
 
-        await unflairedPostLogic(event, context, awarder, settings);
-
-        await flairTextNotAllowedLogic(event, context, awarder, settings);
-
-        await selfAwardAttemptLogic(event, context, awarder, awardee, settings);
-
-        await recipientIsBot(event, context, awarder, awardee, settings);
 
         logger.info("Setting user flair", {
             username,

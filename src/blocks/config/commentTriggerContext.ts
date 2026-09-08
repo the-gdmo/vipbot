@@ -1,6 +1,8 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { Comment, TriggerContext, User } from "@devvit/public-api";
-import { AppSetting } from "./settings";
+import {
+    AppSetting,
+} from "./settings";
 import { logger } from "../utils/logger";
 import { getCurrentScore } from "../utils/common-utils";
 
@@ -16,14 +18,17 @@ export const isModerator = async (
     logger.info(`Filtered modlist`, {
         list: filteredModeratorList,
         length: filteredModeratorList.length,
-    })
+    });
     return filteredModeratorList.length > 0;
 };
 
 export async function getUserIsSuperuser(
+    event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
     awarder: string
 ) {
+    if (!event.comment) return;
+
     const settings = await context.settings.getAll();
 
     const VIPUserSetting =
@@ -54,6 +59,7 @@ export async function getUserIsSuperuser(
         if (!currentScore) {
             return false;
         }
+
         return currentScore.score >= autoSuperuserThreshold;
     } else {
         return false;

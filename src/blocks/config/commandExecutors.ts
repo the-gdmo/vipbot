@@ -152,8 +152,14 @@ export async function executeUserRankCommand(
         target: user.username,
     });
 
+    const userProfile = new UserProfile(user, context);
+    const nextLevel = userProfile.getNextUserLevel();
+    const xpToNextLevel = userProfile.getXpToNextLevel();
     //user specific
     let userRankMessage: string = `# u/${user.username}'s VIPBot Rank\n\n`;
+
+    userRankMessage += `Next Level: ${nextLevel}\n\n`;
+    userRankMessage += `Xp To Next Level: ${xpToNextLevel}`;
 
     const userRankComment = await context.reddit.submitComment({
         id: event.comment.id,
@@ -169,8 +175,7 @@ export async function executeProfileCommand(
     context: TriggerContext,
     user: User
 ) {
-    logger.info("👤 Executing PROFILE command", {
-    });
+    logger.info("👤 Executing PROFILE command", {});
 
     if (!event.comment || !event.author) return;
 
@@ -240,6 +245,28 @@ export async function executeProfileCommand(
     userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
         .getTime()
         .toString()}*`;
+
+    await context.reddit.sendPrivateMessage({
+        to: event.comment.author,
+        subject: `${user.username}'s Profile Info`,
+        text: userProfileMessage,
+    });
+
+    const userProfileSentMessage =
+        (settings[AppSetting.UserProfileSentMessage] as string) ??
+        TemplateDefaults.UserProfileSentMessage;
+    const formattedUserProfileSentComment = formatMessage(
+        event,
+        userProfileSentMessage,
+        { target: user.username }
+    );
+
+    const userProfileInfoSentComment = await context.reddit.submitComment({
+        id: event.comment.id,
+        text: formattedUserProfileSentComment,
+    });
+
+    userProfileInfoSentComment.distinguish();
     return;
 }
 
@@ -252,9 +279,7 @@ export async function executeUserProfileCommand(
 
     try {
         target = await context.reddit.getUserByUsername(targetObj);
-    } catch {
-
-    }
+    } catch {}
 
     if (!target) {
         logger.error(`Couldn't find target for executeUserProfileCommand()`);

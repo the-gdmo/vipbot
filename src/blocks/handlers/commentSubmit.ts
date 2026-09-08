@@ -1,5 +1,6 @@
 import {
     AppSetting,
+    AutoSuperuserReplyOptions,
     NotifyOnBlockedUserReplyOptions,
     NotifyOnPointAlreadyAwardedToUserReplyOptions,
     NotifyOnSelfAwardReplyOptions,
@@ -17,7 +18,10 @@ import {
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
-import { isModerator } from "../config/commentTriggerContext";
+import {
+    getUserIsSuperuser,
+    isModerator,
+} from "../config/commentTriggerContext";
 import {
     executeAchievementCommand,
     executeBalanceCommand,
@@ -30,14 +34,9 @@ import {
     executeProfileCommand,
     executeRankCommand,
     executeRepLeaderboardCommand,
-    executeSetCoinsCommand,
-    executeSetLevelCommand,
-    executeSetReputationCommand,
-    executeSetXPCommand,
     executeStreakCommand,
     executeUserProfileCommand,
     executeUserRankCommand,
-    executeVIPAddDaysCommand,
     executeVIPCommand,
     executeXPLeaderboardCommand,
 } from "../config/commandExecutors";
@@ -60,6 +59,7 @@ export async function onCommentSubmit(
         postId: event.post?.id,
         subreddit: event.subreddit?.name,
         author: event.author?.name,
+        commentUpdate: "previousBody" in event,
     });
 
     // ============================================================
@@ -127,13 +127,35 @@ export async function onCommentSubmit(
         normalizedCommentAuthor === "automoderator";
 
     if (isBotUser) {
-        logger.debug(
-            "🤖 Comment author is the bot — skipping only the automatic point award.",
-            {
-                commentAuthor,
-                botName: context.appSlug,
-            }
-        );
+        logger.debug("🤖 Comment author is bot, returning.", {
+            commentAuthor,
+            botName: context.appSlug,
+        });
+        return;
+    }
+
+    // ============================================================
+    // COMMENTOR
+    // ============================================================
+
+    let commentor: User | undefined;
+    try {
+        logger.debug("👤 Looking up awarder", {
+            username: event.author.name,
+        });
+
+        commentor = await context.reddit.getUserByUsername(event.author.name);
+    } catch (err) {
+        logger.warn("⚠️ Failed to look up author", {
+            username: commentAuthor,
+            error: err,
+        });
+
+        commentor = undefined;
+    }
+
+    if (!commentor) {
+        logger.warn("❌ Awarder could not be resolved");
         return;
     }
 
@@ -187,13 +209,9 @@ export async function onCommentSubmit(
         context.subredditName,
         user.username
     );
-    const hasPermission = await userHasPermission(
-        event,
-        user.id,
-        user.username,
-        context,
-        settings
-    );
+
+    await userHasPermission(event, user.id, user.username, context, settings);
+
     // ============================================================
     // CONTEXT
     // ============================================================
@@ -208,31 +226,6 @@ export async function onCommentSubmit(
         bodySplitLength: bodySplit.length,
         isMod,
     });
-
-    // ============================================================
-    // REGEX HELPERS
-    // ============================================================
-
-    const commandRegex = (command: string): RegExp =>
-        new RegExp(`${prefix}${command}`, "i");
-
-    /*
-     * Commands that specifically target the current user.
-     *
-     * /rank u/example
-     * /nominate u/example
-     */
-
-    const userCommandRegex = (command: string): RegExp =>
-        new RegExp(
-            `^${prefix}${command}\\s+u/
-                ${user.username}`,
-            "i"
-        );
-
-    // ============================================================
-    // COMMAND DETECTION
-    // ============================================================
 
     // ============================================================
     // BLOCKED USERS
@@ -315,15 +308,13 @@ export async function onCommentSubmit(
     // ============================================================
 
     const incrementedKey = `incremented:${user.username}:${parentComment.id}`;
-    const incrementedKeyExists = await context.redis.exists(incrementedKey);
 
-    if (increment !== 0 && !isBotUser) {
+    if (increment !== 0 && !isBotUser && !("previousBody" in event)) {
         await context.redis.set(incrementedKey, "1");
 
         logger.debug("🔢 Comment increment is enabled", {
             increment,
             incrementedKey,
-            incrementedKeyExists,
         });
 
         const currentScore = await getCurrentScore(user, context);
@@ -345,6 +336,75 @@ export async function onCommentSubmit(
             newScore,
             settings
         );
+
+        const userIsSuperUser = await getUserIsSuperuser(
+            event,
+            context,
+            user.username
+        );
+        if (userIsSuperUser) {
+            const threshold =
+                (settings[AppSetting.AutoSuperuserThreshold] as number) ?? 0;
+            const superUserTemplate = formatMessage(
+                event,
+                (settings[AppSetting.AutoSuperuserTemplate] as string) ??
+                    TemplateDefaults.AutoSuperuserTemplate,
+                { awardee: commentor.username, threshold: new Intl.NumberFormat("en").format(threshold) }
+            );
+            const superUserKey = `superUserMessageSent:${commentor.username}`;
+            await context.redis.del(superUserKey);
+
+            const superUserKeyExists = await context.redis.exists(superUserKey);
+            if (superUserKeyExists) {
+                logger.info(`User is already superuser, returning.`, {
+                    user: commentor.username,
+                });
+                return;
+            }
+
+            await context.redis.set(superUserKey, "1");
+
+            logger.info(`Made user a superuser`, { user: commentor.username });
+            const notifyOnSuperuser = ((settings[
+                AppSetting.NotifyOnAutoSuperuser
+            ] as string[]) ?? [AutoSuperuserReplyOptions.NoReply])[0];
+            //comment
+            if (
+                notifyOnSuperuser === AutoSuperuserReplyOptions.ReplyAsComment
+            ) {
+                const superUserMessage = await context.reddit.submitComment({
+                    id: event.comment.id,
+                    text: superUserTemplate,
+                });
+                superUserMessage.distinguish();
+                logger.info(
+                    `Let user know via comment that they are now a superuser`,
+                    { awarder: user.username }
+                );
+                //dm
+            } else if (
+                notifyOnSuperuser === AutoSuperuserReplyOptions.ReplyByPM
+            ) {
+                await context.reddit.sendPrivateMessage({
+                    to: commentor.username,
+                    subject: `You are now a superuser in r/${await context.reddit.getCurrentSubredditName()}`,
+                    text: superUserTemplate,
+                });
+                logger.info(
+                    `Let user know via dm that they are now a superuser`,
+                    {
+                        user: user.username,
+                    }
+                );
+            } else if (
+                notifyOnSuperuser === AutoSuperuserReplyOptions.NoReply
+            ) {
+                logger.info(
+                    `User has been made a superuser, but was not notified`,
+                    { user: user.username }
+                );
+            }
+        }
     } else if (isBotUser) {
         logger.debug("🤖 Automatic comment-increment skipped for bot.", {
             commentAuthor,
@@ -355,8 +415,12 @@ export async function onCommentSubmit(
     // ============================================================
     // SELF AWARD
     // ============================================================
+    const shouldSelfAward = await context.redis.exists(incrementedKey);
 
-    if (commentAuthor === recipient && !incrementedKeyExists) {
+    logger.info(`Should self award?`, {
+        shouldSelfAward: shouldSelfAward === 0 ? "yes" : "no",
+    });
+    if (commentAuthor === recipient && !shouldSelfAward) {
         logger.warn("🛑 Self-award attempt detected", {
             commentAuthor,
             recipient,
@@ -519,43 +583,70 @@ export async function onCommentSubmit(
         return;
     }
 
-    const infoCommand = commandRegex("info").test(commentBody);
-    const helpCommand = commandRegex("help").test(commentBody);
-    const profileCommand = commandRegex("profile").test(commentBody);
-    const rankCommand = commandRegex("rank").test(commentBody);
-    const balanceCommand = commandRegex("balance").test(commentBody);
-    const achievementsCommand = commandRegex("achievements").test(commentBody);
-    const leaderboardCommand = commandRegex("leaderboard").test(commentBody);
-    const streakCommand = commandRegex("streak").test(commentBody);
-    const vipsCommand = commandRegex("vips").test(commentBody);
+    // ============================================================
+    // COMMAND DETECTION
+    // ============================================================
 
-    const userProfileCommand = userCommandRegex("profile").test(commentBody);
-    const userRankCommand = userCommandRegex("rank").test(commentBody);
-    const nominateCommand = userCommandRegex("nominate").test(commentBody);
+    // Parse the command from the first token instead of requiring an
+    // exact bodySplit.length. This allows commands with 1, 2, 3, or
+    // more arguments to be detected correctly.
+    const commandToken = (bodySplit[0] ?? "")
+        .replace(/[.!?]+$/, "")
+        .toLowerCase();
 
-    /*
-     * More specific leaderboard commands must be checked separately.
-     */
+    const normalizedPrefix = prefix.toLowerCase();
 
-    const xpLeaderboardCommand = new RegExp(
-        `^${prefix}leaderboard\\s+xp(?:\\s|$)`,
-        "i"
-    ).test(commentBody);
+    const isCommand = (command: string): boolean =>
+        commandToken === `${normalizedPrefix}${command.toLowerCase()}`;
 
-    const coinLeaderboardCommand = new RegExp(
-        `^${prefix}leaderboard\\s+coins(?:\\s|$)`,
-        "i"
-    ).test(commentBody);
+    const secondToken = bodySplit[1] ?? "";
+    const isTargetUser = (target: string): boolean =>
+        target.toLowerCase() === `u/${user.username.toLowerCase()}`;
 
-    const repLeaderboardCommand = new RegExp(
-        `^${prefix}leaderboard\\s+rep(?:\\s|$)`,
-        "i"
-    ).test(commentBody);
+    const infoCommand = isCommand("info");
+    const helpCommand = isCommand("help");
+    const profileCommand = isCommand("profile") && bodySplit.length === 1;
+    const rankCommand = isCommand("rank") && bodySplit.length === 1;
+    const balanceCommand = isCommand("balance");
+    const achievementsCommand = isCommand("achievements");
+    const streakCommand = isCommand("streak");
+    const vipsCommand = isCommand("vips");
+
+    // Commands that specifically target the current user.
+    // /profile u/example
+    // /rank u/example
+    // /nominate u/example
+    const userProfileCommand =
+        isCommand("profile") && isTargetUser(secondToken);
+    const userRankCommand = isCommand("rank") && isTargetUser(secondToken);
+    const nominateCommand = isCommand("nominate") && isTargetUser(secondToken);
+
+    // More specific leaderboard commands are checked before the generic
+    // leaderboard command so /leaderboard xp does not also run the generic
+    // leaderboard handler.
+    const xpLeaderboardCommand =
+        isCommand("leaderboard") && (bodySplit[1] ?? "").toLowerCase() === "xp";
+
+    const coinLeaderboardCommand =
+        isCommand("leaderboard") &&
+        (bodySplit[1] ?? "").toLowerCase() === "coins";
+
+    const repLeaderboardCommand =
+        isCommand("leaderboard") && /^rep(utation)?$/i.test(bodySplit[1] ?? "");
+
+    const leaderboardCommand =
+        isCommand("leaderboard") &&
+        !xpLeaderboardCommand &&
+        !coinLeaderboardCommand &&
+        !repLeaderboardCommand;
 
     logger.debug("🧪 Command detection results", {
+        commandToken,
+        bodySplit,
         infoCommand,
         helpCommand,
         profileCommand,
+        userProfileCommand,
         rankCommand,
         userRankCommand,
         balanceCommand,
@@ -570,64 +661,30 @@ export async function onCommentSubmit(
     });
 
     // ============================================================
-    // THREE-ARGUMENT COMMANDS
+    // MULTI-ARGUMENT COMMANDS
     // ============================================================
 
     let giftPointsCommand = false;
-    let vipAddDaysCommand = false;
-    let setXpCommand = false;
-    let setCoinsCommand = false;
-    let setRepCommand = false;
-    let setLevelCommand = false;
 
-    if (!hasPermission) {
-        logger.debug("❌ User does not have permission to use commands", {
-            commentAuthor,
-            commentId: event.comment.id,
-        });
-        return;
-    }
+    if (bodySplit.length >= 3) {
+        const target = bodySplit[1] ?? "";
+        const amount = bodySplit[2] ?? "";
 
-    if (bodySplit.length === 3) {
-        const command = bodySplit[0];
-        const target = bodySplit[1];
-        const thirdArg = bodySplit[2];
+        // /gift u/example 10
+        // Additional tokens are allowed and passed to the executor in
+        // bodySplit, rather than causing the command to be ignored.
+        giftPointsCommand =
+            isCommand("gift") &&
+            /u\/[0-9a-z]{3,21}/i.test(target) &&
+            amount.length > 0;
 
-        if (!thirdArg) {
-            logger.info(`Third argument not detected, returning,`);
-            return;
-        }
-
-        logger.debug("🧪 Testing three-argument command", {
-            command,
+        logger.debug("🧪 Multi-argument command results", {
+            commandToken,
             target,
-            thirdArg,
+            thirdArg: amount,
             bodySplit,
-        });
-
-        const threeArgRegex = (commandName: string): RegExp =>
-            new RegExp(
-                `^${prefix}${commandName}\\s+u/${target}\\s+${thirdArg}$`,
-                "i"
-            );
-
-        giftPointsCommand = threeArgRegex("gift").test(commentBody);
-        vipAddDaysCommand = threeArgRegex("vipadd").test(commentBody);
-
-        // FIXED: These previously all incorrectly tested "vipadd".
-        setXpCommand = threeArgRegex("setxp").test(commentBody);
-        setCoinsCommand = threeArgRegex("setcoins").test(commentBody);
-        setRepCommand = threeArgRegex("setrep").test(commentBody);
-
-        setLevelCommand = threeArgRegex("setlevel").test(commentBody);
-
-        logger.debug("🧪 Three-argument command results", {
+            bodySplitLength: bodySplit.length,
             giftPointsCommand,
-            vipAddDaysCommand,
-            setXpCommand,
-            setCoinsCommand,
-            setRepCommand,
-            setLevelCommand,
         });
     }
 
@@ -650,13 +707,7 @@ export async function onCommentSubmit(
         streakCommand ||
         vipsCommand ||
         nominateCommand ||
-        giftPointsCommand ||
-        vipAddDaysCommand ||
-        setXpCommand ||
-        setCoinsCommand ||
-        setRepCommand ||
-        setLevelCommand;
-
+        giftPointsCommand;
     logger.debug("📋 Command classification", {
         isBotCommand,
         commentBody,
@@ -792,7 +843,7 @@ export async function onCommentSubmit(
         // --------------------------------------------------------
         // TWO-ARGUMENT COMMANDS
         // --------------------------------------------------------
-        if (bodySplit.length === 2) {
+        if (bodySplit.length >= 2) {
             const target = bodySplit[1];
 
             if (!target) {
@@ -805,41 +856,19 @@ export async function onCommentSubmit(
             if (userProfileCommand) {
                 await executeUserProfileCommand(event, context, target);
             }
+
+            // --------------------------------------------------------
+            // THREE-ARGUMENT COMMANDS
+            // --------------------------------------------------------
+
+            if (giftPointsCommand) {
+                await executeGiftPointsCommand(event, context, user, bodySplit);
+            }
+        } else {
+            logger.warn("⚠️ Comment was detected but no handler matched", {
+                commentBody,
+                bodySplit,
+            });
         }
-
-        // --------------------------------------------------------
-        // THREE-ARGUMENT COMMANDS
-        // --------------------------------------------------------
-
-        if (giftPointsCommand) {
-            await executeGiftPointsCommand(event, context, user, bodySplit);
-        }
-
-        if (vipAddDaysCommand) {
-            await executeVIPAddDaysCommand(event, context, user, bodySplit);
-        }
-
-        if (setXpCommand) {
-            await executeSetXPCommand(event, context, user, bodySplit);
-        }
-
-        if (setCoinsCommand) {
-            await executeSetCoinsCommand(event, context, user, bodySplit);
-        }
-
-        if (setRepCommand) {
-            await executeSetReputationCommand(event, context, user, bodySplit);
-        }
-
-        if (setLevelCommand) {
-            await executeSetLevelCommand(event, context, user, bodySplit);
-        }
-
-        logger.warn("⚠️ Comment was detected but no handler matched", {
-            commentBody,
-            bodySplit,
-        });
-
-        return;
     }
 }
