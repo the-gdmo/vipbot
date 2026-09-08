@@ -1,15 +1,33 @@
-import {
-    appSettings,
-} from "./config/settings";
+import { appSettings } from "./config/settings";
 import { onPostSubmit } from "./handlers/postSubmit";
-import { onAppFirstInstall, onAppInstallOrUpgrade } from "./handlers/installEvents";
+import {
+    onAppFirstInstall,
+    onAppInstallOrUpgrade,
+} from "./handlers/installEvents";
 import { Devvit, FormField } from "@devvit/public-api";
-import { CLEANUP_JOB, UPDATE_BOT_FLAIR_JOB, UPDATE_MODINFO_JOB } from "./config/constants";
+import {
+    CLEANUP_JOB,
+    UPDATE_BOT_FLAIR_JOB,
+    UPDATE_MODINFO_JOB,
+} from "./config/constants";
 import { cleanupDeletedAccounts } from "./jobs/cleanup";
 import { modInfoJob } from "./jobs/modInfo";
 import { onCommentSubmit } from "./handlers/commentSubmit";
 import { botFlairJob } from "./handlers/users";
-import { handleManualPointSetting, handleRemoveVip, handleSetCoins, handleSetLevel, handleSetRep, handleSetXP, handleVIPAddDays, manualSetPointsFormHandler, removeVipHandler, setCoinsFormHandler, setLevelFormHandler, setRepFormHandler, setXpFormHandler, vipAddDaysFormHandler } from "./config/userProfile";
+import {
+    handleManualPointSetting,
+    handleRemoveVip,
+    handleSetCoins,
+    handleSetRep,
+    handleSetXP,
+    handleVIPAddDays,
+    manualSetPointsFormHandler,
+    removeVipHandler,
+    setCoinsFormHandler,
+    setRepFormHandler,
+    setXpFormHandler,
+    vipAddDaysFormHandler,
+} from "./config/userProfile";
 
 /**
  *
@@ -71,49 +89,44 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
     name: UPDATE_MODINFO_JOB,
     onRun: modInfoJob,
-})
+});
 
 Devvit.addSchedulerJob({
     name: UPDATE_BOT_FLAIR_JOB,
     onRun: botFlairJob,
-})
+});
 
 // ─────────────────────────────────────────────────────────────
 // Form Handlers
 // ─────────────────────────────────────────────────────────────
 export const manualSetPointsForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    manualSetPointsFormHandler,
+    manualSetPointsFormHandler
 );
 
 export const vipAddDaysForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    vipAddDaysFormHandler,
+    vipAddDaysFormHandler
 );
 
 export const setXpForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    setXpFormHandler,
+    setXpFormHandler
 );
 
 export const setCoinsForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    setCoinsFormHandler,
+    setCoinsFormHandler
 );
 
 export const setRepForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    setRepFormHandler,
-);
-
-export const setLevelForm = Devvit.createForm(
-    (data) => ({ fields: data.fields as FormField[] }),
-    setLevelFormHandler,
+    setRepFormHandler
 );
 
 export const removeVipForm = Devvit.createForm(
     (data) => ({ fields: data.fields as FormField[] }),
-    removeVipHandler,
+    removeVipHandler
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -188,20 +201,6 @@ Devvit.addMenuItem({
     forUserType: "moderator",
     location: "post",
     onPress: handleSetRep,
-});
-
-Devvit.addMenuItem({
-    label: "[VIP Bot] - Set Level",
-    forUserType: "moderator",
-    location: "comment",
-    onPress: handleSetLevel,
-});
-
-Devvit.addMenuItem({
-    label: "[VIP Bot] - Set Level",
-    forUserType: "moderator",
-    location: "post",
-    onPress: handleSetLevel,
 });
 
 Devvit.addMenuItem({

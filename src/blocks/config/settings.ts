@@ -84,7 +84,7 @@ export enum TemplateDefaults {
     OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
     LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
     DisallowedFlairMessage = "Points cannot be awarded on posts with this flair. Please choose another post.",
-    UsersWhoCannotAwardPointsMessage = `You do not have permission to award VIP points to users. [Message The Mods]({modmailLink}) if you have any questions.`,
+    UsersWhoCannotAwardPointsMessage = `You do not have permission to award VIP points to users. [Message The Mods]({modmailLink}) if you have any questions`,
     ModOnlyDisallowedMessage = "Only moderators allowed to award points.",
     ApprovedOnlyDisallowedMessage = "Only moderators and approved users can award points.",
     SelfAwardMessage = "You can't award yourself a {name}.",

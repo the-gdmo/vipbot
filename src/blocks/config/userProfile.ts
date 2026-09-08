@@ -1,7 +1,25 @@
-import { Context, FormOnSubmitEvent, JSONObject, MenuItemOnPressEvent, TriggerContext, User } from "@devvit/public-api";
+import {
+    Context,
+    FormOnSubmitEvent,
+    JSONObject,
+    MenuItemOnPressEvent,
+    TriggerContext,
+    User,
+} from "@devvit/public-api";
 import { USER_VIP_POINTS_KEY } from "./constants";
-import { getCurrentScore, ScoreResult, setUserScore } from "../utils/common-utils";
-import { manualSetPointsForm, removeVipForm, setCoinsForm, setLevelForm, setRepForm, setXpForm, vipAddDaysForm } from "../main";
+import {
+    getCurrentScore,
+    ScoreResult,
+    setUserScore,
+} from "../utils/common-utils";
+import {
+    manualSetPointsForm,
+    removeVipForm,
+    setCoinsForm,
+    setRepForm,
+    setXpForm,
+    vipAddDaysForm,
+} from "../main";
 import { logger } from "../utils/logger";
 
 export class UserProfile {
@@ -56,8 +74,15 @@ export class UserProfile {
         ]);
     }
 
-    async getReputation(vipPoints: Promise<number>, subredditRank: Promise<number>, pointsGiven: Promise<number>, pointsReceived: Promise<number>, currentLevel: Promise<number>, nextLevel: any, xpToNextLevel: Promise<number>) {
-
+    async getReputation(
+        vipPoints: Promise<number>,
+        subredditRank: Promise<number>,
+        pointsGiven: Promise<number>,
+        pointsReceived: Promise<number>,
+        currentLevel: Promise<number>,
+        nextLevel: any,
+        xpToNextLevel: Promise<number>
+    ) {
         return {
             vipPoints,
             subredditRank,
@@ -73,7 +98,7 @@ export class UserProfile {
         currentLevel: Promise<number>,
         vipPoints: Promise<number>,
         nextLevel: Promise<number>,
-        xpToNextLevel: Promise<number>,
+        xpToNextLevel: Promise<number>
     ): Promise<void> {
         await Promise.all([
             this.setCurrentUserLevel(currentLevel),
@@ -83,8 +108,12 @@ export class UserProfile {
         ]);
     }
 
-    async getProgress(currentLevel: Promise<number>, vipPoints: Promise<number>, nextLevel: Promise<number>, xpToNextLevel: Promise<number>) {
-
+    async getProgress(
+        currentLevel: Promise<number>,
+        vipPoints: Promise<number>,
+        nextLevel: Promise<number>,
+        xpToNextLevel: Promise<number>
+    ) {
         return {
             currentLevel,
             vipPoints,
@@ -324,9 +353,7 @@ export async function handleManualPointSetting(
     // ============================================================
 
     try {
-        const comment = await context.reddit.getCommentById(
-            event.targetId
-        );
+        const comment = await context.reddit.getCommentById(event.targetId);
 
         username = comment.authorName;
     } catch {
@@ -339,9 +366,7 @@ export async function handleManualPointSetting(
 
     if (!username) {
         try {
-            const post = await context.reddit.getPostById(
-                event.targetId
-            );
+            const post = await context.reddit.getPostById(event.targetId);
 
             username = post.authorName;
         } catch {
@@ -373,9 +398,7 @@ export async function handleManualPointSetting(
     }
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot set points. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot set points. User may be shadowbanned");
         return;
     }
 
@@ -386,9 +409,7 @@ export async function handleManualPointSetting(
     const currentScore = await getCurrentScore(user, context);
 
     if (!currentScore) {
-        context.ui.showToast(
-            "Unable to retrieve current score for user"
-        );
+        context.ui.showToast("Unable to retrieve current score for user");
         return;
     }
 
@@ -419,9 +440,7 @@ export async function handleManualPointSetting(
 const getXPKey = (username: string) => `xp:${username}`;
 const getCoinsKey = (username: string) => `coins:${username}`;
 const getRepKey = (username: string) => `rep:${username}`;
-const getLevelKey = (username: string) => `level:${username}`;
 const getVIPKey = (username: string) => `vip:${username}`;
-
 
 // ============================================================
 // TARGET USER HELPERS
@@ -474,7 +493,6 @@ async function getTargetUserFromContext(
     }
 }
 
-
 /**
  * Gets the author of the menu item's target.
  *
@@ -488,9 +506,7 @@ async function getTargetUserFromMenuEvent(
     try {
         // Try comment first.
         try {
-            const comment = await context.reddit.getCommentById(
-                event.targetId
-            );
+            const comment = await context.reddit.getCommentById(event.targetId);
 
             if (comment.authorName) {
                 return await context.reddit.getUserByUsername(
@@ -506,9 +522,7 @@ async function getTargetUserFromMenuEvent(
             const post = await context.reddit.getPostById(event.targetId);
 
             if (post.authorName) {
-                return await context.reddit.getUserByUsername(
-                    post.authorName
-                );
+                return await context.reddit.getUserByUsername(post.authorName);
             }
         } catch {
             // Unable to resolve target.
@@ -519,7 +533,6 @@ async function getTargetUserFromMenuEvent(
 
     return undefined;
 }
-
 
 // ============================================================
 // INTEGER VALIDATION
@@ -537,7 +550,6 @@ function getNonNegativeInteger(value: unknown): number | undefined {
     return value;
 }
 
-
 // ============================================================
 // VIP ADD DAYS
 // ============================================================
@@ -549,18 +561,14 @@ export async function vipAddDaysFormHandler(
     const days = getNonNegativeInteger(event.values.days);
 
     if (days === undefined || days < 1) {
-        context.ui.showToast(
-            "Entry must be greater than 0"
-        );
+        context.ui.showToast("Entry must be greater than 0");
         return;
     }
 
     const user = await getTargetUserFromContext(context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot add VIP time. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot add VIP time. User may be shadowbanned");
         return;
     }
 
@@ -575,10 +583,7 @@ export async function vipAddDaysFormHandler(
     if (existingVIP) {
         const parsedExpiration = Number(existingVIP);
 
-        if (
-            Number.isFinite(parsedExpiration) &&
-            parsedExpiration > now
-        ) {
+        if (Number.isFinite(parsedExpiration) && parsedExpiration > now) {
             currentExpiration = parsedExpiration;
         }
     }
@@ -592,17 +597,14 @@ export async function vipAddDaysFormHandler(
     const expirationDate = new Date(newExpiration);
 
     context.ui.showToast(
-        `${user.username} received ${days} day${
-            days === 1 ? "" : "s"
-        } of VIP.`
+        `${user.username} received ${days} day${days === 1 ? "" : "s"} of VIP`
     );
 
     console.log(
-        `VIP added to ${user.username}: ${days} days.` +
-        `New expiration: ${expirationDate.toISOString()}`
+        `VIP added to ${user.username}: ${days} days` +
+            `New expiration: ${expirationDate.toISOString()}`
     );
 }
-
 
 // ============================================================
 // VIP ADD DAYS MENU HANDLER
@@ -615,9 +617,7 @@ export async function handleVIPAddDays(
     const user = await getTargetUserFromMenuEvent(event, context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot add VIP time. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot add VIP time. User may be shadowbanned");
         return;
     }
 
@@ -632,8 +632,7 @@ export async function handleVIPAddDays(
 
         if (Number.isFinite(expiration) && expiration > Date.now()) {
             currentDays = Math.ceil(
-                (expiration - Date.now()) /
-                    (24 * 60 * 60 * 1000)
+                (expiration - Date.now()) / (24 * 60 * 60 * 1000)
             );
         }
     }
@@ -646,10 +645,12 @@ export async function handleVIPAddDays(
             label: `How many VIP days should be added to ${user.username}?`,
             helpText:
                 currentDays > 0
-                    ? `${user.username} currently has approximately ${currentDays} day${
+                    ? `${
+                          user.username
+                      } currently has approximately ${currentDays} day${
                           currentDays === 1 ? "" : "s"
-                      } of VIP remaining.`
-                    : `${user.username} currently does not have active VIP.`,
+                      } of VIP remaining`
+                    : `${user.username} currently does not have active VIP`,
             multiSelect: false,
             required: true,
         },
@@ -669,31 +670,21 @@ export async function setXpFormHandler(
     const entry = getNonNegativeInteger(event.values.xp);
 
     if (entry === undefined) {
-        context.ui.showToast(
-            "You must enter an XP value of 0 or higher"
-        );
+        context.ui.showToast("You must enter an XP value of 0 or higher");
         return;
     }
 
     const user = await getTargetUserFromContext(context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot set XP. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot set XP. User may be shadowbanned");
         return;
     }
 
-    await context.redis.set(
-        getXPKey(user.username),
-        entry.toString()
-    );
+    await context.redis.set(getXPKey(user.username), entry.toString());
 
-    context.ui.showToast(
-        `XP for ${user.username} is now ${entry}.`
-    );
+    context.ui.showToast(`XP for ${user.username} is now ${entry}`);
 }
-
 
 // ============================================================
 // SET XP MENU HANDLER
@@ -706,15 +697,11 @@ export async function handleSetXP(
     const user = await getTargetUserFromMenuEvent(event, context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot set XP. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot set XP. User may be shadowbanned");
         return;
     }
 
-    const existing = await context.redis.get(
-        getXPKey(user.username)
-    );
+    const existing = await context.redis.get(getXPKey(user.username));
 
     const currentXP = existing ? Number(existing) : 0;
 
@@ -723,9 +710,7 @@ export async function handleSetXP(
             name: "xp",
             type: "number",
             defaultValue:
-                Number.isFinite(currentXP) && currentXP >= 0
-                    ? currentXP
-                    : 0,
+                Number.isFinite(currentXP) && currentXP >= 0 ? currentXP : 0,
             label: `Enter a new XP value for ${user.username}`,
             helpText:
                 "Warning: This will overwrite the XP that currently exists.",
@@ -736,7 +721,6 @@ export async function handleSetXP(
 
     context.ui.showForm(setXpForm, { fields });
 }
-
 
 // ============================================================
 // SET COINS
@@ -749,31 +733,21 @@ export async function setCoinsFormHandler(
     const entry = getNonNegativeInteger(event.values.coins);
 
     if (entry === undefined) {
-        context.ui.showToast(
-            "You must enter a coin value of 0 or higher."
-        );
+        context.ui.showToast("You must enter a coin value of 0 or higher.");
         return;
     }
 
     const user = await getTargetUserFromContext(context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot set coins. User may be shadowbanned."
-        );
+        context.ui.showToast("Cannot set coins. User may be shadowbanned.");
         return;
     }
 
-    await context.redis.set(
-        getCoinsKey(user.username),
-        entry.toString()
-    );
+    await context.redis.set(getCoinsKey(user.username), entry.toString());
 
-    context.ui.showToast(
-        `Coins for ${user.username} are now ${entry}.`
-    );
+    context.ui.showToast(`Coins for ${user.username} are now ${entry}`);
 }
-
 
 // ============================================================
 // SET COINS MENU HANDLER
@@ -786,15 +760,11 @@ export async function handleSetCoins(
     const user = await getTargetUserFromMenuEvent(event, context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot set coins. User may be shadowbanned."
-        );
+        context.ui.showToast("Cannot set coins. User may be shadowbanned.");
         return;
     }
 
-    const existing = await context.redis.get(
-        getCoinsKey(user.username)
-    );
+    const existing = await context.redis.get(getCoinsKey(user.username));
 
     const currentCoins = existing ? Number(existing) : 0;
 
@@ -816,7 +786,6 @@ export async function handleSetCoins(
 
     context.ui.showForm(setCoinsForm, { fields });
 }
-
 
 // ============================================================
 // SET REP
@@ -844,16 +813,10 @@ export async function setRepFormHandler(
         return;
     }
 
-    await context.redis.set(
-        getRepKey(user.username),
-        entry.toString()
-    );
+    await context.redis.set(getRepKey(user.username), entry.toString());
 
-    context.ui.showToast(
-        `Reputation for ${user.username} is now ${entry}.`
-    );
+    context.ui.showToast(`Reputation for ${user.username} is now ${entry}`);
 }
-
 
 // ============================================================
 // SET REP MENU HANDLER
@@ -872,9 +835,7 @@ export async function handleSetRep(
         return;
     }
 
-    const existing = await context.redis.get(
-        getRepKey(user.username)
-    );
+    const existing = await context.redis.get(getRepKey(user.username));
 
     const currentRep = existing ? Number(existing) : 0;
 
@@ -883,9 +844,7 @@ export async function handleSetRep(
             name: "rep",
             type: "number",
             defaultValue:
-                Number.isFinite(currentRep) && currentRep >= 0
-                    ? currentRep
-                    : 0,
+                Number.isFinite(currentRep) && currentRep >= 0 ? currentRep : 0,
             label: `Enter a new reputation value for ${user.username}`,
             helpText:
                 "Warning: This will overwrite the reputation that currently exists.",
@@ -897,87 +856,6 @@ export async function handleSetRep(
     context.ui.showForm(setRepForm, { fields });
 }
 
-
-// ============================================================
-// SET LEVEL
-// ============================================================
-
-export async function setLevelFormHandler(
-    event: FormOnSubmitEvent<JSONObject>,
-    context: Context
-) {
-    const entry = getNonNegativeInteger(event.values.level);
-
-    if (entry === undefined) {
-        context.ui.showToast(
-            "You must enter a level of 0 or higher."
-        );
-        return;
-    }
-
-    const user = await getTargetUserFromContext(context);
-
-    if (!user) {
-        context.ui.showToast(
-            "Cannot set level. User may be shadowbanned."
-        );
-        return;
-    }
-
-    await context.redis.set(
-        getLevelKey(user.username),
-        entry.toString()
-    );
-
-    context.ui.showToast(
-        `Level for ${user.username} is now ${entry}.`
-    );
-}
-
-
-// ============================================================
-// SET LEVEL MENU HANDLER
-// ============================================================
-
-export async function handleSetLevel(
-    event: MenuItemOnPressEvent,
-    context: Context
-) {
-    const user = await getTargetUserFromMenuEvent(event, context);
-
-    if (!user) {
-        context.ui.showToast(
-            "Cannot set level. User may be shadowbanned."
-        );
-        return;
-    }
-
-    const existing = await context.redis.get(
-        getLevelKey(user.username)
-    );
-
-    const currentLevel = existing ? Number(existing) : 0;
-
-    const fields = [
-        {
-            name: "level",
-            type: "number",
-            defaultValue:
-                Number.isFinite(currentLevel) && currentLevel >= 0
-                    ? currentLevel
-                    : 0,
-            label: `Enter a new level for ${user.username}`,
-            helpText:
-                "Warning: This will overwrite the level that currently exists.",
-            multiSelect: false,
-            required: true,
-        },
-    ];
-
-    context.ui.showForm(setLevelForm, { fields });
-}
-
-
 // ============================================================
 // REMOVE VIP
 // ============================================================
@@ -986,13 +864,11 @@ export async function removeVipHandler(
     event: FormOnSubmitEvent<JSONObject>,
     context: Context
 ) {
-    const confirmText = String(
-        event.values.confirmation ?? ""
-    )
+    const confirmText = String(event.values.confirmation ?? "")
         .trim()
         .toLowerCase();
 
-        const confirm = /^confirm$/gi;
+    const confirm = /^confirm$/gi;
     if (!confirm.test(confirmText)) {
         context.ui.showToast(`⚠️ You must type "confirm" (case insensitive)`);
         logger.warn("⚠️ Moderator failed confirmation input.", { confirmText });
@@ -1002,9 +878,7 @@ export async function removeVipHandler(
     const user = await getTargetUserFromContext(context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot remove VIP. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot remove VIP. User may be shadowbanned");
         return;
     }
 
@@ -1013,19 +887,14 @@ export async function removeVipHandler(
     const existingVIP = await context.redis.get(key);
 
     if (!existingVIP) {
-        context.ui.showToast(
-            `${user.username} does not currently have VIP.`
-        );
+        context.ui.showToast(`${user.username} does not currently have VIP`);
         return;
     }
 
     await context.redis.del(key);
 
-    context.ui.showToast(
-        `VIP has been removed from ${user.username}.`
-    );
+    context.ui.showToast(`VIP has been removed from ${user.username}`);
 }
-
 
 // ============================================================
 // REMOVE VIP MENU HANDLER
@@ -1038,20 +907,14 @@ export async function handleRemoveVip(
     const user = await getTargetUserFromMenuEvent(event, context);
 
     if (!user) {
-        context.ui.showToast(
-            "Cannot remove VIP. User may be shadowbanned"
-        );
+        context.ui.showToast("Cannot remove VIP. User may be shadowbanned");
         return;
     }
 
-    const existingVIP = await context.redis.get(
-        getVIPKey(user.username)
-    );
+    const existingVIP = await context.redis.get(getVIPKey(user.username));
 
     if (!existingVIP) {
-        context.ui.showToast(
-            `${user.username} does not currently have VIP`
-        );
+        context.ui.showToast(`${user.username} does not currently have VIP`);
         return;
     }
 
