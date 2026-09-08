@@ -402,6 +402,18 @@ export async function handleManualPointSetting(
         return;
     }
 
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username}'s points cannot be set`
+        );
+        return;
+    }
     // ============================================================
     // GET CURRENT SCORE
     // ============================================================
@@ -621,6 +633,19 @@ export async function handleVIPAddDays(
         return;
     }
 
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username} cannot be granted VIP`
+        );
+        return;
+    }
+
     const key = getVIPKey(user.username);
 
     const existingVIP = await context.redis.get(key);
@@ -701,6 +726,19 @@ export async function handleSetXP(
         return;
     }
 
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username}'s xp cannot be set`
+        );
+        return;
+    }
+
     const existing = await context.redis.get(getXPKey(user.username));
 
     const currentXP = existing ? Number(existing) : 0;
@@ -761,6 +799,19 @@ export async function handleSetCoins(
 
     if (!user) {
         context.ui.showToast("Cannot set coins. User may be shadowbanned.");
+        return;
+    }
+
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username}'s coins cannot be set`
+        );
         return;
     }
 
@@ -831,6 +882,19 @@ export async function handleSetRep(
     if (!user) {
         context.ui.showToast(
             "Cannot set reputation. User may be shadowbanned."
+        );
+        return;
+    }
+
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username}'s rep cannot be set`
         );
         return;
     }
@@ -908,6 +972,19 @@ export async function handleRemoveVip(
 
     if (!user) {
         context.ui.showToast("Cannot remove VIP. User may be shadowbanned");
+        return;
+    }
+
+    const normalizedCommentAuthor = user.username.trim().toLowerCase();
+    const normalizedBotName = context.appSlug.trim().toLowerCase();
+
+    const isBotUser =
+        normalizedCommentAuthor === normalizedBotName ||
+        normalizedCommentAuthor === "automoderator";
+    if (isBotUser) {
+        context.ui.showToast(
+            `${user.username} cannot receive VIP status`
+        );
         return;
     }
 
