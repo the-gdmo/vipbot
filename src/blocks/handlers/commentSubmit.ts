@@ -119,8 +119,12 @@ export async function onCommentSubmit(
     // The bot should be able to run through the normal comment handler,
     // including command processing, but it must never receive the automatic
     // comment-increment points.
+
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = commentAuthor.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
@@ -349,7 +353,10 @@ export async function onCommentSubmit(
                 event,
                 (settings[AppSetting.AutoSuperuserTemplate] as string) ??
                     TemplateDefaults.AutoSuperuserTemplate,
-                { awardee: commentor.username, threshold: new Intl.NumberFormat("en").format(threshold) }
+                {
+                    awardee: commentor.username,
+                    threshold: new Intl.NumberFormat("en").format(threshold),
+                }
             );
             const superUserKey = `superUserMessageSent:${commentor.username}`;
             await context.redis.del(superUserKey);

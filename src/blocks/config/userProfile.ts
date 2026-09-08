@@ -21,6 +21,7 @@ import {
     vipAddDaysForm,
 } from "../main";
 import { logger } from "../utils/logger";
+import { AppSetting, TemplateDefaults } from "./settings";
 
 export class UserProfile {
     constructor(
@@ -402,16 +403,18 @@ export async function handleManualPointSetting(
         return;
     }
 
+    const settings = await context.settings.getAll();
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username}'s points cannot be set`
-        );
+        context.ui.showToast(`${user.username}'s points cannot be set`);
         return;
     }
     // ============================================================
@@ -633,16 +636,18 @@ export async function handleVIPAddDays(
         return;
     }
 
+    const settings = await context.settings.getAll();
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username} cannot be granted VIP`
-        );
+        context.ui.showToast(`${user.username} cannot be granted VIP`);
         return;
     }
 
@@ -726,16 +731,18 @@ export async function handleSetXP(
         return;
     }
 
+    const settings = await context.settings.getAll();
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username}'s xp cannot be set`
-        );
+        context.ui.showToast(`${user.username}'s xp cannot be set`);
         return;
     }
 
@@ -802,16 +809,18 @@ export async function handleSetCoins(
         return;
     }
 
+    const settings = await context.settings.getAll();
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username}'s coins cannot be set`
-        );
+        context.ui.showToast(`${user.username}'s coins cannot be set`);
         return;
     }
 
@@ -886,16 +895,18 @@ export async function handleSetRep(
         return;
     }
 
+    const settings = await context.settings.getAll();
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username}'s rep cannot be set`
-        );
+        context.ui.showToast(`${user.username}'s rep cannot be set`);
         return;
     }
 
@@ -975,16 +986,19 @@ export async function handleRemoveVip(
         return;
     }
 
+    const settings = await context.settings.getAll();
+
+    const botsThatWillNotBeManaged =
+        (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
+        TemplateDefaults.AccountsThatWillNotBeManaged;
     const normalizedCommentAuthor = user.username.trim().toLowerCase();
-    const normalizedBotName = context.appSlug.trim().toLowerCase();
+    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
     const isBotUser =
         normalizedCommentAuthor === normalizedBotName ||
         normalizedCommentAuthor === "automoderator";
     if (isBotUser) {
-        context.ui.showToast(
-            `${user.username} cannot receive VIP status`
-        );
+        context.ui.showToast(`${user.username} cannot receive VIP status`);
         return;
     }
 

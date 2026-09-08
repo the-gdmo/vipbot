@@ -75,6 +75,7 @@ export enum AppSetting {
     BotFlairTextColor = "botFlairTextColor",
     BotFlairBackgroundColor = "botFlairBackgroundColor",
     UserProfileSentMessage = "userProfileSentMessage",
+    AccountsThatWillNotBeManaged = "botsThatWillNotBeManaged",
 }
 
 export enum TemplateDefaults {
@@ -128,6 +129,7 @@ export enum TemplateDefaults {
     BotFlairTextColor = "light",
     BotFlairBackgroundColor = "#00AA00",
     UserProfileSentMessage = "I just sent you a dm with {target}'s VIP Bot profile info.",
+    AccountsThatWillNotBeManaged = "vipbot2\nAutoModerator",
 }
 
 export enum AutoSuperuserReplyOptions {
@@ -993,6 +995,13 @@ export const appSettings: SettingsFormField[] = [
         type: "group",
         label: "Misc Settings",
         fields: [
+            {
+                type: "paragraph",
+                name: AppSetting.AccountsThatWillNotBeManaged,
+                label: "Ignored Accounts",
+                helpText: "Accounts that will not be managed by VIP Bot",
+                defaultValue: TemplateDefaults.AccountsThatWillNotBeManaged,
+            },
             {
                 name: AppSetting.LeaderboardMode,
                 type: "select",
