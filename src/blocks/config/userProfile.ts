@@ -19,7 +19,7 @@ import {
     setRepForm,
     setXpForm,
     vipAddDaysForm,
-} from "../main";
+} from "./main";
 import { logger } from "../utils/logger";
 import { AppSetting, TemplateDefaults } from "./settings";
 
