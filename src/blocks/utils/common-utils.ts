@@ -1151,7 +1151,7 @@ export async function setUserScoreOnCommentSubmit(
         const userRank = index >= 0 ? index + 1 : undefined;
         if (!userRank) {
             logger.error(`Couldn't find user's rank`, {
-                author: event.comment.author,
+                author: username,
             });
             return;
         }

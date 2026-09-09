@@ -194,40 +194,51 @@ export async function executeProfileCommand(
     if (symbol) {
         userProfileMessage += `## ${symbol} Reputation\n\n`;
         userProfileMessage +=
-            userProfile.getReputation(
-                vipPoints,
-                subredditRank,
-                pointsGiven,
-                pointsReceived,
-                currentLevel,
-                nextLevel,
-                xpToNextLevel
-            ) + `\n\n`;
+            vipPoints +
+            `\n\n` +
+            subredditRank +
+            `\n\n` +
+            pointsGiven +
+            `\n\n` +
+            pointsReceived +
+            `\n\n` +
+            currentLevel +
+            `\n\n` +
+            nextLevel +
+            `\n\n` +
+            xpToNextLevel +
+            `\n\n`;
         userProfileMessage += `---\n\n\n`;
     } else {
         userProfileMessage += `## Reputation\n\n`;
         userProfileMessage +=
-            userProfile.getReputation(
-                vipPoints,
-                subredditRank,
-                pointsGiven,
-                pointsReceived,
-                currentLevel,
-                nextLevel,
-                xpToNextLevel
-            ) + `\n\n`;
-
+            vipPoints +
+            `\n\n` +
+            subredditRank +
+            `\n\n` +
+            pointsGiven +
+            `\n\n` +
+            pointsReceived +
+            `\n\n` +
+            currentLevel +
+            `\n\n` +
+            nextLevel +
+            `\n\n` +
+            xpToNextLevel +
+            `\n\n`;
         userProfileMessage += `---\n\n\n`;
     }
 
     userProfileMessage += `## 📈 Progress\n\n`;
     userProfileMessage +=
-        userProfile.getProgress(
-            currentLevel,
-            vipPoints,
-            nextLevel,
-            xpToNextLevel
-        ) + `\n\n`;
+        currentLevel +
+        `\n\n` +
+        vipPoints +
+        `\n\n` +
+        nextLevel +
+        `\n\n` +
+        xpToNextLevel +
+        `\n\n`;
     userProfileMessage += `---\n\n\n`;
 
     userProfileMessage += `## 🥇 Achievements\n\n`;
@@ -239,15 +250,15 @@ export async function executeProfileCommand(
     userProfileMessage += `---\n\n\n`;
 
     userProfileMessage += `## 📊 Point History\n\n`;
-    userProfileMessage += userProfile.getPointHistory + `\n\n`;
+    userProfileMessage += userProfile.getPointHistory() + `\n\n`;
     userProfileMessage += `---\n\n\n`;
 
-    userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
-        .getTime()
-        .toString()}*`;
+    userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${
+        new Date().toUTCString()
+    }*`;
 
     await context.reddit.sendPrivateMessage({
-        to: event.comment.author,
+        to: user.username,
         subject: `${user.username}'s Profile Info`,
         text: userProfileMessage,
     });
@@ -356,8 +367,7 @@ export async function executeUserProfileCommand(
     userProfileMessage += `---\n\n\n`;
 
     userProfileMessage += `*Profile maintained automatically by VIPBot.*\n*Last updated: ${new Date()
-        .getTime()
-        .toString()}*`;
+        .toUTCString()}*`;
     return;
 }
 

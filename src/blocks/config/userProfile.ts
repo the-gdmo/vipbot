@@ -35,6 +35,7 @@ export class UserProfile {
         await this.context.redis.set(userVipPointsKey, value.toString());
     }
 
+    //All Time Points
     async getVipPoints(): Promise<number> {
         const userVipPointsKey = await USER_VIP_POINTS_KEY(this.user);
         const points = await this.context.redis.get(userVipPointsKey);
@@ -193,16 +194,35 @@ export class UserProfile {
         await this.context.redis.set(key, JSON.stringify(value));
     }
 
+    async getPointsToday() {}
+
+    async setPointsToday(value: number) {
+        const pointsTodayKey = `userProfile:${this.user.username}:pointsToday`;
+
+        await this.context.redis.set(pointsTodayKey, value.toString());
+    }
+
+    async getPointsThisWeek() {}
+
+    async setPointsThisWeek(value: number) {}
+
+    async getPointsThisMonth() {}
+
+    async setPointsThisMonth(value: number) {}
+
+    async getPointsThisYear() {}
+
+    async setPointsThisYear(value: number) {}
     async getPointHistory() {
         const key = `userProfile:${this.user.username}:pointHistory`;
         const history = await this.context.redis.get(key);
 
         if (!history) {
             return {
-                today: 0,
-                thisWeek: 0,
-                thisMonth: 0,
-                thisYear: 0,
+                today: this.getPointsToday(),
+                thisWeek: this.getPointsThisWeek(),
+                thisMonth: this.getPointsThisMonth(),
+                thisYear: this.getPointsThisYear(),
                 allTime: await this.getVipPoints(),
             };
         }
