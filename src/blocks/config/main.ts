@@ -1,19 +1,19 @@
-import { appSettings } from "./config/settings";
-import { onPostSubmit } from "./handlers/postSubmit";
+import { appSettings } from "./settings";
+import { onPostSubmit } from "../handlers/postSubmit";
 import {
     onAppFirstInstall,
     onAppInstallOrUpgrade,
-} from "./handlers/installEvents";
+} from "../handlers/installEvents";
 import { Devvit, FormField } from "@devvit/public-api";
 import {
     CLEANUP_JOB,
     UPDATE_BOT_FLAIR_JOB,
     UPDATE_MODINFO_JOB,
-} from "./config/constants";
-import { cleanupDeletedAccounts } from "./jobs/cleanup";
-import { modInfoJob } from "./jobs/modInfo";
-import { onCommentSubmit } from "./handlers/commentSubmit";
-import { botFlairJob } from "./handlers/users";
+} from "./constants";
+import { cleanupDeletedAccounts } from "../jobs/cleanup";
+import { modInfoJob } from "../jobs/modInfo";
+import { onCommentSubmit } from "../handlers/commentSubmit";
+import { botFlairJob } from "../handlers/users";
 import {
     handleManualPointSetting,
     handleRemoveVip,
@@ -27,7 +27,7 @@ import {
     setRepFormHandler,
     setXpFormHandler,
     vipAddDaysFormHandler,
-} from "./config/userProfile";
+} from "./userProfile";
 
 /**
  *
