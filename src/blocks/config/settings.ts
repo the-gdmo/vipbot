@@ -50,7 +50,6 @@ export enum AppSetting {
     DisallowedFlairMessage = "disallowedFlairMessage",
     NotifyOnSelfAward = "notifyOnSelfAward",
     SelfAwardMessage = "selfAwardMessage",
-    NotifyOnSuccess = "notifyOnSuccess",
     NotifyUsersWhoCannotAwardPoints = "notifyUsersWhoCannotAwardPoints",
     NotifyOnBlockedUser = "notifyOnBlockedUser",
     LeaderboardMode = "leaderboardMode",
@@ -294,24 +293,6 @@ const NotifyOnUnflairedPostReplyOptionChoices = [
     {
         label: "Reply as comment",
         value: NotifyOnUnflairedPostReplyOptions.ReplyAsComment,
-    },
-];
-
-export enum NotifyOnSuccessReplyOptions {
-    NoReply = "none",
-    ReplyByPM = "replybypm",
-    ReplyAsComment = "replybycomment",
-}
-
-const NotifyOnSuccessReplyOptionChoices = [
-    { label: "No Notification", value: NotifyOnSuccessReplyOptions.NoReply },
-    {
-        label: "Send user a private message",
-        value: NotifyOnSuccessReplyOptions.ReplyByPM,
-    },
-    {
-        label: "Reply as comment",
-        value: NotifyOnSuccessReplyOptions.ReplyAsComment,
     },
 ];
 
@@ -948,14 +929,6 @@ export const appSettings: SettingsFormField[] = [
                 defaultValue: TemplateDefaults.SelfAwardTemplate,
                 onValidate: stringOrParagraphFieldContainsText,
             },
-            // {
-            //     type: "select",
-            //     name: AppSetting.NotifyOnSuccess,
-            //     label: "Notify users when a point is awarded successfully",
-            //     options: NotifyOnSuccessReplyOptionChoices,
-            //     defaultValue: [NotifyOnSuccessReplyOptions.ReplyAsComment],
-            //     onValidate: selectFieldHasOptionChosen,
-            // },
             {
                 type: "select",
                 name: AppSetting.NotifyUsersWhoCannotAwardPoints,
@@ -1016,17 +989,9 @@ export const appSettings: SettingsFormField[] = [
                 type: "number",
                 label: "Leaderboard Size",
                 helpText:
-                    "Number of users to show on the leaderboard (1-10,000)",
+                    "Number of users to show on the leaderboard (1-1,000)",
                 defaultValue: 50,
-                onValidate: ({ value }) => {
-                    if (value === undefined || value === null || isNaN(value)) {
-                        return "You must enter a number";
-                    }
-
-                    if (value !== undefined && (value < 1 || value > 10_000)) {
-                        return "Value should be between 1 and 10,000";
-                    }
-                },
+                onValidate: leaderboardSizeIsValid,
             },
             {
                 //DiscordServerLink
@@ -1150,6 +1115,18 @@ function stringOrParagraphFieldContainsText(
 
     if (event.value.length === 0) {
         return "Field cannot be empty";
+    }
+}
+
+export function leaderboardSizeIsValid(
+    event: SettingsFormFieldValidatorEvent<number>
+) {
+    if (typeof event.value !== "number" || isNaN(event.value)) {
+        return "Value must be a number";
+    }
+
+    if (event.value < 0) {
+        return "Value must be between 1 and 1,000";
     }
 }
 
