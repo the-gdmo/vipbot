@@ -19,7 +19,7 @@ export async function botFlairJob(
     const prefix = (settings[AppSetting.CommandPrefix] as string) ?? "/";
 
     const flairText = (
-        (settings[AppSetting.BotFlairText] as string) ??
+        (settings[AppSetting.BotFlairText] as string | undefined) ??
         `VIP Bot | ${prefix}info`
     )
         .replaceAll(/{{prefix}}/gi, prefix)
