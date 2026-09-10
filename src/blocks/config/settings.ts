@@ -71,10 +71,11 @@ export enum AppSetting {
     DMInfoMessage = "dmInfoMessage",
     HelpMessageConfirmation = "helpMessageConfirmation",
     DMHelpMessage = "dmHelpMessage",
+    BotFlairText = "botFlairText",
     BotFlairTextColor = "botFlairTextColor",
     BotFlairBackgroundColor = "botFlairBackgroundColor",
     UserProfileSentMessage = "userProfileSentMessage",
-    AccountsThatWillNotBeManaged = "botsThatWillNotBeManaged",
+    AccountsThatWillNotBeManaged = "accountsThatWillNotBeManaged",
 }
 
 export enum TemplateDefaults {
@@ -866,6 +867,13 @@ export const appSettings: SettingsFormField[] = [
         fields: [
             {
                 type: "string",
+                name: AppSetting.BotFlairText,
+                label: "Bot Flair Text (All placeholders allow single or double curly braces)",
+                helpText: "Placeholders Supported: prefix",
+                defaultValue: "VIP Bot | {prefix}info",
+            },
+            {
+                type: "string",
                 name: AppSetting.BotFlairBackgroundColor,
                 label: "Bot Flair Background Color",
                 helpText: "Must be a valid hex id (eg #00AA00)",
@@ -972,7 +980,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "paragraph",
                 name: AppSetting.AccountsThatWillNotBeManaged,
                 label: "Ignored Accounts",
-                helpText: "Accounts that will not be managed by VIP Bot",
+                helpText: "Accounts that will not be managed by VIP Bot. Case insensitive",
                 defaultValue: TemplateDefaults.AccountsThatWillNotBeManaged,
             },
             {

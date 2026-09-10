@@ -18,7 +18,17 @@ export async function botFlairJob(
     const subredditName = context.subredditName;
     const prefix = (settings[AppSetting.CommandPrefix] as string) ?? "/";
 
-    const flairText = `VIP Bot | ${prefix}info`;
+    const flairText = (
+        (settings[AppSetting.BotFlairText] as string) ??
+        `VIP Bot | ${prefix}info`
+    )
+        .replaceAll(/{{prefix}}/gi, prefix)
+        .replaceAll(/{prefix}/gi, prefix);
+
+    if (!flairText) {
+        logger.info(`Bot flair not set in app settings, returning.`);
+        return;
+    }
 
     const backgroundColor =
         (settings[AppSetting.BotFlairBackgroundColor] as string | undefined) ??
