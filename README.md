@@ -109,23 +109,23 @@ to view the currently configured store options and your coin balance. Purchase a
 
 Store options are configured in the **VIP Store Settings** group with `AppSetting.VIPStoreOptions`. Each non-empty line uses:
 
-`days|coinCost|label`
+`optionNumber|duration|coinCost`
 
 For example:
 
-`7|24|1 Week`
+`1|5|1D`
 
 At least one valid option is required. Durations and costs must be positive whole numbers, and durations must be unique. The default store assumes coins are generally earned in one-coin increments and provides:
 
 | Option | VIP Duration | Cost |
 | ---: | --- | ---: |
-| 1 | 1 Day | 5 coins |
-| 2 | 3 Days | 12 coins |
-| 3 | 5 Days | 18 coins |
-| 4 | 1 Week | 24 coins |
-| 5 | 2 Weeks | 45 coins |
-| 6 | 3 Weeks | 65 coins |
-| 7 | 1 Month | 90 coins |
+| 1 | 1D | 5 coins |
+| 2 | 3D | 12 coins |
+| 3 | 5D | 18 coins |
+| 4 | 1W | 24 coins |
+| 5 | 2W | 45 coins |
+| 6 | 3W | 65 coins |
+| 7 | 1M | 90 coins |
 
 Purchasing temporary VIP extends existing temporary VIP time. Users with permanent VIP cannot purchase additional VIP time. The store requires VIP status, VIP Coins, and the VIP Store to be enabled.
 
@@ -176,7 +176,7 @@ Users can check their current streak with:
 
 VIPBot includes an automatic achievement engine. When achievements are enabled, qualifying milestones are evaluated after normal activity and after supported VIPBot economy/community actions. Once unlocked, an achievement remains on the user's profile even if a current balance, streak, reputation value, or VIP status later decreases.
 
-The built-in catalog currently contains **188 realistically attainable achievements**. It intentionally avoids moderator-only actions and leaderboard-place requirements so ordinary members can earn the catalog through participation and community interaction when the corresponding VIPBot features are enabled.
+The built-in catalog currently contains **188 realistically attainable default achievements** with customizable milestones. It intentionally avoids moderator-only actions and leaderboard-place requirements so ordinary members can earn the catalog through participation and community interaction when the corresponding VIPBot features are enabled.
 
 | Category | Milestones / achievements |
 | --- | --- |
@@ -793,7 +793,7 @@ VIPBot has **two user-to-user reward paths**:
 
 2. **Reply awards with the configurable `pointCommand`**
    * Reply directly to another user's comment with the configured point command.
-   * The default `pointCommand` is `/vippoint` when the global prefix is `/`.
+   * The default `pointCommand` is `/vip` when the global prefix is `/`.
    * Every successful `pointCommand` reply awards the **parent-comment author both VIP points and VIP Coins at the same time**.
    * By default, one successful reply awards **1 VIP point + 1 coin**.
    * The VIP-point amount is configurable with `AppSetting.PointCommandVIPPointAmount`.
@@ -803,7 +803,7 @@ VIPBot has **two user-to-user reward paths**:
 
 For example, with the defaults:
 
-`/vippoint`
+`/vip`
 
 as a reply to another user's comment gives that comment author **1 VIP point and 1 VIP Coin**.
 
@@ -918,7 +918,7 @@ The main VIPBot progression systems can be configured independently. Important s
 | `PointCommandVIPPointAmount` | VIP points awarded by each successful `pointCommand`; defaults to `1` |
 | `PointCommandCoinAmount` | VIP Coins awarded by each successful `pointCommand`; defaults to `1` |
 | `VIPStoreEnabled` | Enables or disables the VIP Store |
-| `VIPStoreOptions` | Store options in `days|coinCost|label` format; at least one valid option is required |
+| `VIPStoreOptions` | Store options in `optionNumber|coinCost|duration` format; at least one valid option is required |
 | `ReputationEnabled` | Enables or disables the separate reputation system |
 | `NominationsEnabled` | Enables or disables VIP nominations |
 | `NominationReputationReward` | Reputation added for a nomination when reputation is enabled |
@@ -1010,6 +1010,8 @@ NOTE: All placeholders are case-insensitive.
 
 ### Award / Recognition Information
 
+* `requester`: The user requesting information.
+* `target`: The user being targeted.
 * `awardee`: The user receiving recognition.
 * `awarder`: The user giving recognition.
 * `total`: The recipient's total amount.
@@ -1027,14 +1029,10 @@ NOTE: All placeholders are case-insensitive.
 * `leaderboard`: Link to the subreddit leaderboard.
 * `rank`: The user's current leaderboard placement.
 * `place`: The user's placement when used in flair formatting.
-* `awardeePage`: Link to the user's public profile/history page.
-* `awarderPage`: Link to the awarder's public profile/history page.
 
 ### Command Information
 
 * `command`: The command associated with an action.
-* `commandsWithOr`: Lists configured commands separated with `or`.
-* `commandsWithAnd`: Lists configured commands separated with `and`.
 * `helpPage`: Link to the VIPBot help page.
 
 ---
@@ -1215,6 +1213,12 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 ---
 
 ## Version History
+### 1.0.1
+* Make README accurately reflect commands
+* Remove subreddit rank from profile command
+* Make all command responses send a dm to the user with a public response notifying the user that it did
+* Change "Who can award points?" default to everyone
+* Fix formatting of certain logic
 ### 1.0.0
 * NOTE: As far as I can tell this should work fully. If it doesn't, please [message me](https://www.reddit.com/message/compose?to=u/ryry50583583&subject=VIP%20Bot%20Feature%20Missing&message=Error%20Details%3A%20%5BPlease%20provide%20me%20with%20as%20much%20detail%20as%20possible%20regarding%20what%20happened%5D%0A%0ALink%20to%20where%20the%20issue%20occurred%3A%20%5Bput%20link%20here%5D) to let me know and link to the original comment or post that made you aware of this.
 * Bring the bot into an up-and-running state

@@ -368,7 +368,7 @@ export enum TemplateDefaults {
     BotFlairBackgroundColor = "#00AA00",
     UserProfileSentMessage = "I just sent you a dm with {target}'s VIP Bot profile info.",
     AccountsThatWillNotBeManaged = "vipbot2\nAutoModerator",
-    UserBecameSuperuserFromNominationsMessage = "userBecameSuperuserFromNominationsMessage",
+    UserBecameSuperuserFromNominationsMessage = "Hey u/{awardee}!\n\nYou are now a VIP user in r/{subreddit} and have been granted VIP status.",
 }
 
 export enum AutoSuperuserReplyOptions {
@@ -1408,7 +1408,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Who can award points?",
                 helpText: "Choose who is allowed to award points",
                 options: AccessControlOptionChoices,
-                defaultValue: [AccessControlOptions.ModsAndVIPS],
+                defaultValue: [AccessControlOptions.Everyone],
                 onValidate: selectFieldHasOptionChosen,
             },
             {

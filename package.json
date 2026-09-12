@@ -10,7 +10,7 @@
     "patch": "npm run type-check && devvit publish --public --bump patch",
     "minor": "npm run type-check && devvit publish --public --bump minor",
     "major": "npm run type-check && devvit publish --public --bump major",
-    "dev": "devvit playtest",
+    "dev": "npm run type-check && devvit playtest",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "login": "devvit login",
     "prettier": "prettier --write .",

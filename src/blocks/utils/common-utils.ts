@@ -1261,7 +1261,7 @@ export async function getManagedFlairScore(
          * Escape all regex special characters in normal text.
          */
         const escapeRegex = (text: string): string =>
-            text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            text.replace(/[.*]/g, "\\$&");
 
         /*
          * Escape the template first.

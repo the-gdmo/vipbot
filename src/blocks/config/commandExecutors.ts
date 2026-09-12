@@ -14,6 +14,7 @@ import {
     UserProfile,
     UserProfileSnapshot,
 } from "./userProfile";
+import { getManagedFlairScore, getParentComment } from "../utils/common-utils";
 
 const NOMINATION_SCORE_KEY = "vipbot:nominations:score";
 const NOMINATION_BY_USER_HASH_KEY = "vipbot:nominations:by-user";
@@ -75,12 +76,308 @@ async function replyToCommand(
 ): Promise<void> {
     if (!event.comment || !event.author) return;
 
-    const comment = await context.reddit.submitComment({
-        id: event.comment.id,
-        text: formatMessage(event, text, {}),
+    const settings = await context.settings.getAll();
+    const prefix =
+        (
+            (settings[AppSetting.CommandPrefix] as string | undefined) ?? "/"
+        ).trim() || "/";
+    const pointCommandName = (
+        (settings[AppSetting.PointCommand] as string | undefined) ??
+        TemplateDefaults.PointCommand
+    ).trim();
+    const pointName =
+        (
+            (settings[AppSetting.PointName] as string | undefined) ?? "point"
+        ).trim() || "point";
+    const pointSymbol = (
+        (settings[AppSetting.PointSymbol] as string | undefined) ?? ""
+    ).trim();
+    const vipFlairTemplate = (
+        (settings[AppSetting.FlairFormatting] as string | undefined) ??
+        "👑 VIP • {rank}"
+    ).trim();
+    const leaderboardName =
+        (
+            (settings[AppSetting.LeaderboardName] as string | undefined) ??
+            "leaderboard"
+        ).trim() || "leaderboard";
+    const helpPageName = (
+        (settings[AppSetting.PointSystemHelpPage] as string | undefined) ?? ""
+    )
+        .trim()
+        .replace(/^\/+|\/+$/g, "");
+
+    const body = event.comment.body?.trim() ?? "";
+    const escapedPointCommand = pointCommandName.replace(/[.*]/g, "\\$&");
+
+    const pointCommandMatch = body.match(
+        new RegExp(`(?:^|\\s)(${escapedPointCommand})(?=\\s|[.!?,;:]|$)`, "i")
+    );
+
+    const genericCommandMatch = body.match(
+        new RegExp(`(?:^|\\s)([a-zA-Z][a-zA-Z0-9_-]*)(?=\\s|[.!?,;:]|$)`, "i")
+    );
+
+    const command = pointCommandMatch?.[1] ?? genericCommandMatch?.[1] ?? `vip`;
+
+    const username = event.author.name;
+    let requester: User | undefined;
+
+    try {
+        requester = await context.reddit.getUserByUsername(username);
+    } catch (error) {
+        logger.warn("⚠️ Could not resolve requester in replyToCommand()", {
+            user: username,
+            error,
+        });
+    }
+
+    if (!requester) {
+        logger.warn(
+            "⚠️ Command response aborted because requester could not be resolved",
+            {
+                user: username,
+                command,
+                subreddit: context.subredditName,
+            }
+        );
+        return;
+    }
+
+    const subreddit = event.subreddit?.name ?? context.subredditName ?? "";
+    const explicitTargetMatch = body.match(
+        /(?:^|\s)((?:u\/|@)[a-zA-Z0-9_-]+)(?=\s|[.!?,;:]|$)/i
+    );
+    const explicitTargetToken = explicitTargetMatch?.[1];
+
+    let targetUser: User | undefined;
+    let requestedTargetName = explicitTargetToken
+        ? displayUsername(explicitTargetToken)
+        : requester.username;
+
+    if (pointCommandMatch) {
+        try {
+            const parentComment = await getParentComment(event, context);
+            if (parentComment?.authorName) {
+                requestedTargetName = parentComment.authorName;
+                targetUser = await resolveUser(
+                    context,
+                    parentComment.authorName
+                );
+            }
+        } catch (error) {
+            logger.warn("⚠️ Could not resolve parent-comment awardee", {
+                user: username,
+                command,
+                commentId: event.comment.id,
+                error,
+            });
+        }
+    }
+
+    if (!targetUser && explicitTargetToken) {
+        targetUser = await resolveUser(context, explicitTargetToken);
+    }
+
+    if (!targetUser && !explicitTargetToken && !pointCommandMatch) {
+        targetUser = requester;
+    }
+
+    if (!targetUser) return;
+
+    const targetProfile = new UserProfile(targetUser, context);
+    await targetProfile.syncLeaderboards();
+
+    const [targetSnapShot, targetPlace] = await Promise.all([
+        targetProfile.getSnapshot(),
+        getLeaderboardPosition(
+            context,
+            UserProfile.XP_LEADERBOARD_KEY,
+            requester.username
+        ),
+    ]);
+
+    let targetTotal = "N/A";
+    let targetName = targetUser?.username ?? requestedTargetName;
+
+    if (targetUser) {
+        try {
+            const managedScore = await getManagedFlairScore(
+                targetUser,
+                context
+            );
+            if (managedScore) {
+                targetTotal = formatNumber(managedScore.score);
+            }
+        } catch (error) {
+            logger.warn("⚠️ Could not load target managed-flair score", {
+                requester: requester.username,
+                target: targetUser.username,
+                command,
+                error,
+            });
+        }
+    }
+
+    let awardee: User | undefined;
+    const parentComment = await getParentComment(event, context);
+    if (!parentComment) return;
+    try {
+        awardee = await context.reddit.getUserByUsername(parentComment.authorName);
+    } catch {
+        //
+    }
+
+    if (!awardee) return;
+
+    const vipExpiration = targetSnapShot.vipExpiration;
+    const hasVIP =
+        vipExpiration === "permanent" ||
+        (typeof vipExpiration === "number" && vipExpiration > Date.now());
+    const vipStatus =
+        vipExpiration === "permanent"
+            ? "Permanent"
+            : typeof vipExpiration === "number" && vipExpiration > Date.now()
+            ? "Active"
+            : "Inactive";
+    const vipExpires =
+        vipExpiration === "permanent"
+            ? "Never"
+            : typeof vipExpiration === "number" && vipExpiration > Date.now()
+            ? new Date(vipExpiration).toUTCString()
+            : "N/A";
+    const vipDuration =
+        vipExpiration === "permanent"
+            ? "Permanent"
+            : typeof vipExpiration === "number" && vipExpiration > Date.now()
+            ? formatRemainingTime(vipExpiration)
+            : "None";
+
+    const wikiBase = subreddit
+        ? `https://www.reddit.com/r/${subreddit}/wiki`
+        : "https://www.reddit.com/wiki";
+    const leaderboard = `${wikiBase}/${leaderboardName.replace(
+        /^\/+|\/+$/g,
+        ""
+    )}`;
+    const helpPage = helpPageName ? `${wikiBase}/${helpPageName}` : wikiBase;
+    const markdownGuide = "https://www.reddit.com/wiki/markdown";
+    const permalink = event.comment.permalink ?? "";
+    const title = event.post?.title ?? "";
+
+    const placeholders: Record<string, string> = {
+        prefix,
+        username: requester.username,
+        author: event.author.name,
+        subreddit,
+        level: formatNumber(targetSnapShot.currentLevel),
+        rank: targetSnapShot.rankName,
+        xp: formatNumber(targetSnapShot.xp),
+        userCoins: formatNumber(targetSnapShot.coins),
+        coins: formatNumber(
+            (settings[AppSetting.PointCommandVIPPointAmount] as number) ?? 0
+        ),
+        reputation: formatNumber(targetSnapShot.reputation),
+        place:
+            targetPlace !== undefined ? formatNumber(targetPlace) : "Unranked",
+        streak: formatNumber(targetSnapShot.streak),
+        vip: hasVIP ? "Yes" : "No",
+        vipStatus,
+        vipPoints: formatNumber(
+            (settings[AppSetting.PointCommandVIPPointAmount] as number) ?? 0
+        ),
+        vipExpires,
+        vipDuration,
+        vipFlair: vipFlairTemplate,
+        requester: requester.username,
+        target: targetName,
+        awardee: awardee.username,
+        awarder: requester.username,
+        total: targetTotal,
+        symbol: pointSymbol,
+        name: pointName,
+        permalink,
+        title,
+        markdownGuide,
+        leaderboard,
+        pointCommand: command,
+        helpPage,
+    };
+
+    if (hasVIP && vipFlairTemplate) {
+        let formattedVIPFlair = vipFlairTemplate;
+
+        for (const [key, value] of Object.entries(placeholders)) {
+            const doubleRegex = new RegExp(`{{${key}}}`, "gi");
+            const singleRegex = new RegExp(`{${key}}`, "gi");
+
+            formattedVIPFlair = formattedVIPFlair
+                .replace(doubleRegex, value)
+                .replace(singleRegex, value);
+        }
+
+        placeholders.vipFlair = formattedVIPFlair;
+    }
+
+    logger.debug("📨 Sending command response via DM", {
+        user: username,
+        requester: placeholders.requester,
+        target: placeholders.target,
+        awardee: placeholders.awardee,
+        awarder: placeholders.awarder,
+        command,
+        subreddit,
+        commentId: event.comment.id,
+        placeholders,
     });
 
-    await comment.distinguish();
+    try {
+        await context.reddit.sendPrivateMessage({
+            to: username,
+            subject: `Response to ${prefix}${command} in r/${subreddit}`,
+            text: formatMessage(event, text, placeholders),
+        });
+
+        logger.info("✅ Command response DM sent", {
+            user: username,
+            command,
+            subreddit,
+        });
+    } catch (error) {
+        await logger.error("❌ Failed to send command response DM", {
+            user: username,
+            command,
+            subreddit,
+            error,
+        });
+        return;
+    }
+
+    try {
+        const comment = await context.reddit.submitComment({
+            id: event.comment.id,
+            text: formatMessage(
+                event,
+                `Bot response sent to your DMs.`,
+                placeholders
+            ),
+        });
+
+        await comment.distinguish();
+
+        logger.debug("✅ Command DM confirmation comment posted", {
+            user: username,
+            command,
+            commentId: event.comment.id,
+        });
+    } catch (error) {
+        await logger.error("❌ Failed to post command DM confirmation", {
+            user: username,
+            command,
+            commentId: event.comment.id,
+            error,
+        });
+    }
 }
 
 async function resolveUser(
@@ -190,15 +487,10 @@ function buildProfileMessage(snapshot: UserProfileSnapshot): string {
             : "Inactive";
 
     return (
-        `# u/${snapshot.username}'s VIPBot Profile\n\n` +
+        `## u/${snapshot.username}'s VIPBot Profile\n\n` +
         `## ⭐ Reputation\n\n` +
         `**Reputation:** ${formatNumber(snapshot.reputation)}\n\n` +
         `**VIP Points:** ${formatNumber(snapshot.vipPoints)}\n\n` +
-        `**Subreddit Rank:** ${
-            snapshot.subredditRank > 0
-                ? `#${snapshot.subredditRank}`
-                : "Unranked"
-        }\n\n` +
         `**Points Given:** ${formatNumber(snapshot.vipPointsGiven)}\n\n` +
         `**Points Received:** ${formatNumber(snapshot.vipPointsReceived)}\n\n` +
         `---\n\n` +
@@ -236,32 +528,24 @@ function buildProfileMessage(snapshot: UserProfileSnapshot): string {
         `**All Time:** ${formatNumber(snapshot.pointHistory.allTime)}\n\n` +
         `---\n\n` +
         `*Profile maintained automatically by VIPBot.*\n` +
-        `*Last updated: ${new Date().toUTCString()}*`
+        `*Last updated: ${
+            snapshot.lastUpdatedAt !== undefined
+                ? new Date(snapshot.lastUpdatedAt).toUTCString()
+                : "Unknown"
+        }*`
     );
 }
 
 async function sendProfileDM(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext,
-    requester: User,
     target: User
 ): Promise<void> {
     const targetProfile = new UserProfile(target, context);
     const snapshot = await targetProfile.getSnapshot();
     const message = buildProfileMessage(snapshot);
 
-    await context.reddit.sendPrivateMessage({
-        to: requester.username,
-        subject: `${target.username}'s VIPBot Profile`,
-        text: message,
-    });
-
-    const settings = await context.settings.getAll();
-    const confirmationTemplate =
-        (settings[AppSetting.UserProfileSentMessage] as string) ??
-        TemplateDefaults.UserProfileSentMessage;
-
-    const confirmation = formatMessage(event, confirmationTemplate, {
+    const confirmation = formatMessage(event, message, {
         target: target.username,
     });
 
@@ -295,7 +579,7 @@ export async function executeInfoCommand(
 
     const confirmation = formatMessage(
         event,
-        TemplateDefaults.InfoMessageConfirmation,
+        TemplateDefaults.DMInfoMessage,
         {}
     );
 
@@ -306,7 +590,6 @@ export async function executeHelpCommand(
     event: CommentSubmit | CommentUpdate,
     user: User,
     isMod: boolean,
-    prefix: string,
     context: TriggerContext
 ) {
     if (!event.comment) return;
@@ -319,35 +602,8 @@ export async function executeHelpCommand(
     const template = isMod
         ? TemplateDefaults.ModDMHelpMessage
         : TemplateDefaults.NormalUserDMHelpMessage;
-    const settings = await context.settings.getAll();
-    const pointCommand = (
-        (settings[AppSetting.PointCommand] as string | undefined) ??
-        TemplateDefaults.PointCommand
-    ).trim();
-    const pointCommandVipPoints =
-        (settings[AppSetting.PointCommandVIPPointAmount] as
-            | number
-            | undefined) ?? 1;
-    const pointCommandCoins =
-        (settings[AppSetting.PointCommandCoinAmount] as number | undefined) ??
-        1;
 
-    await context.reddit.sendPrivateMessage({
-        to: user.username,
-        subject: "VIP Bot Help",
-        text: formatMessage(event, template, {
-            prefix,
-            pointCommand,
-            vipPoints: pointCommandVipPoints.toString(),
-            coins: pointCommandCoins.toString(),
-        }),
-    });
-
-    const confirmation = formatMessage(
-        event,
-        TemplateDefaults.HelpMessageConfirmation,
-        {}
-    );
+    const confirmation = formatMessage(event, template, {});
 
     await replyToCommand(event, context, confirmation);
 }
@@ -411,7 +667,7 @@ export async function executeProfileCommand(
         user: user.username,
     });
 
-    await sendProfileDM(event, context, user, user);
+    await sendProfileDM(event, context, user);
 }
 
 export async function executeUserProfileCommand(
@@ -447,7 +703,7 @@ export async function executeUserProfileCommand(
         target: target.username,
     });
 
-    await sendProfileDM(event, context, requester, target);
+    await sendProfileDM(event, context, target);
 }
 
 export async function executeRankCommand(

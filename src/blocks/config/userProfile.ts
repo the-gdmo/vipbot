@@ -91,6 +91,7 @@ export type UserProfileSnapshot = {
     recentAwards: RecentAward[];
     pointHistory: PointHistory;
     vipExpiration?: number | "permanent";
+    lastUpdatedAt?: number;
 };
 
 export type ActiveVIP = {
@@ -201,6 +202,26 @@ function getUTCISOWeekKey(date = new Date()): string {
         ((target.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7
     );
     return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+function getUTCPointHistoryPeriodStarts(now = Date.now()): {
+    dayStart: number;
+    weekStart: number;
+    monthStart: number;
+    yearStart: number;
+} {
+    const date = new Date(now);
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    const dayStart = Date.UTC(year, month, day);
+
+    return {
+        dayStart,
+        weekStart: dayStart - date.getUTCDay() * 86_400_000,
+        monthStart: Date.UTC(year, month, 1),
+        yearStart: Date.UTC(year, 0, 1),
+    };
 }
 
 function parseLevelThresholds(raw: string): LevelThreshold[] {
@@ -322,8 +343,147 @@ export class UserProfile {
         return (await this.getOptionalNumber(key)) ?? 0;
     }
 
+    private async touchLastUpdated(updatedAt = Date.now()): Promise<void> {
+        const key = this.profileKey("lastUpdatedAt");
+        const current = await this.getOptionalNumber(key);
+
+        if (current === undefined || updatedAt > current) {
+            await this.context.redis.set(key, updatedAt.toString());
+        }
+    }
+
+    async getLastUpdatedAt(): Promise<number | undefined> {
+        return this.getOptionalNumber(this.profileKey("lastUpdatedAt"));
+    }
+
     private async setNumber(key: string, value: number): Promise<void> {
         await this.context.redis.set(key, value.toString());
+        await this.touchLastUpdated();
+    }
+
+    private async ensurePointHistoryPeriods(now = Date.now()): Promise<void> {
+        const periods = getUTCPointHistoryPeriodStarts(now);
+        const legacy = await this.getLegacyPointHistory();
+
+        const specs = [
+            {
+                markerKey: this.profileKey("pointHistoryDayStartUTC"),
+                valueKey: this.profileKey("pointsToday"),
+                periodStart: periods.dayStart,
+                legacyValue: legacy.today,
+            },
+            {
+                markerKey: this.profileKey("pointHistoryWeekStartUTC"),
+                valueKey: this.profileKey("pointsThisWeek"),
+                periodStart: periods.weekStart,
+                legacyValue: legacy.thisWeek,
+            },
+            {
+                markerKey: this.profileKey("pointHistoryMonthStartUTC"),
+                valueKey: this.profileKey("pointsThisMonth"),
+                periodStart: periods.monthStart,
+                legacyValue: legacy.thisMonth,
+            },
+            {
+                markerKey: this.profileKey("pointHistoryYearStartUTC"),
+                valueKey: this.profileKey("pointsThisYear"),
+                periodStart: periods.yearStart,
+                legacyValue: legacy.thisYear,
+            },
+        ] as const;
+
+        let latestResetBoundary: number | undefined;
+
+        for (const spec of specs) {
+            const [storedMarker, storedValue] = await Promise.all([
+                this.getOptionalNumber(spec.markerKey),
+                this.getOptionalNumber(spec.valueKey),
+            ]);
+
+            if (storedMarker === undefined) {
+                const initialValue =
+                    storedValue ??
+                    (typeof spec.legacyValue === "number"
+                        ? spec.legacyValue
+                        : 0);
+
+                await Promise.all([
+                    this.context.redis.set(
+                        spec.markerKey,
+                        spec.periodStart.toString()
+                    ),
+                    storedValue === undefined
+                        ? this.context.redis.set(
+                              spec.valueKey,
+                              initialValue.toString()
+                          )
+                        : Promise.resolve(),
+                ]);
+                continue;
+            }
+
+            if (storedMarker !== spec.periodStart) {
+                await Promise.all([
+                    this.context.redis.set(spec.valueKey, "0"),
+                    this.context.redis.set(
+                        spec.markerKey,
+                        spec.periodStart.toString()
+                    ),
+                ]);
+
+                latestResetBoundary = Math.max(
+                    latestResetBoundary ?? 0,
+                    spec.periodStart
+                );
+            }
+        }
+
+        if (latestResetBoundary !== undefined) {
+            await this.touchLastUpdated(latestResetBoundary);
+        }
+    }
+
+    private async adjustPointHistoryBuckets(
+        amount: number,
+        allTime: number,
+        now = Date.now()
+    ): Promise<void> {
+        await this.ensurePointHistoryPeriods(now);
+
+        const keys = [
+            this.profileKey("pointsToday"),
+            this.profileKey("pointsThisWeek"),
+            this.profileKey("pointsThisMonth"),
+            this.profileKey("pointsThisYear"),
+        ];
+
+        const values = await Promise.all(
+            keys.map((key) => this.context.redis.incrBy(key, amount))
+        );
+
+        const normalizedValues = await Promise.all(
+            values.map(async (value, index) => {
+                if (value >= 0) return value;
+                await this.context.redis.set(keys[index]!, "0");
+                return 0;
+            })
+        );
+
+        const history: PointHistory = {
+            today: normalizedValues[0] ?? 0,
+            thisWeek: normalizedValues[1] ?? 0,
+            thisMonth: normalizedValues[2] ?? 0,
+            thisYear: normalizedValues[3] ?? 0,
+            allTime,
+        };
+
+        await Promise.all([
+            this.context.redis.set(
+                this.profileKey("pointHistory"),
+                JSON.stringify(history)
+            ),
+            this.touchLastUpdated(now),
+        ]);
     }
 
     private async getSettings() {
@@ -413,11 +573,16 @@ export class UserProfile {
     async adjustVipPoints(amount: number): Promise<number> {
         requireInteger(amount, "VIP point adjustment");
         const key = await USER_VIP_POINTS_KEY(this.user);
+        const now = Date.now();
         const updated = await this.context.redis.incrBy(key, amount);
 
         if (updated < 0) {
             await this.context.redis.incrBy(key, -amount);
             throw new Error("VIP points cannot be negative.");
+        }
+
+        if (amount !== 0) {
+            await this.adjustPointHistoryBuckets(amount, updated, now);
         }
 
         return updated;
@@ -442,6 +607,7 @@ export class UserProfile {
             throw new Error("VIP points given cannot be negative.");
         }
 
+        if (amount !== 0) await this.touchLastUpdated();
         return updated;
     }
 
@@ -464,6 +630,7 @@ export class UserProfile {
             throw new Error("VIP points received cannot be negative.");
         }
 
+        if (amount !== 0) await this.touchLastUpdated();
         return updated;
     }
 
@@ -505,6 +672,7 @@ export class UserProfile {
             score: updated,
         });
 
+        if (amount !== 0) await this.touchLastUpdated();
         return updated;
     }
 
@@ -596,6 +764,7 @@ export class UserProfile {
 
         await Promise.all(updates);
         await this.applyAutomaticVIPFromXP(updatedXP);
+        if (amount !== 0) await this.touchLastUpdated();
         return updatedXP;
     }
 
@@ -672,6 +841,7 @@ export class UserProfile {
             score: updatedBalance,
         });
 
+        if (amount !== 0) await this.touchLastUpdated();
         return updatedBalance;
     }
 
@@ -1100,10 +1270,13 @@ export class UserProfile {
     }
 
     async setAchievements(value: string[]): Promise<void> {
-        await this.context.redis.set(
-            this.profileKey("achievements"),
-            JSON.stringify(value)
-        );
+        await Promise.all([
+            this.context.redis.set(
+                this.profileKey("achievements"),
+                JSON.stringify(value)
+            ),
+            this.touchLastUpdated(),
+        ]);
     }
 
     async getAchievements(): Promise<string[]> {
@@ -1139,10 +1312,13 @@ export class UserProfile {
     }
 
     async setRecentAwards(value: RecentAward[]): Promise<void> {
-        await this.context.redis.set(
-            this.profileKey("recentAwards"),
-            JSON.stringify(value)
-        );
+        await Promise.all([
+            this.context.redis.set(
+                this.profileKey("recentAwards"),
+                JSON.stringify(value)
+            ),
+            this.touchLastUpdated(),
+        ]);
     }
 
     async getRecentAwards(): Promise<RecentAward[]> {
@@ -1211,81 +1387,146 @@ export class UserProfile {
 
     async setPointsToday(value: number): Promise<void> {
         requireNonNegativeInteger(value, "Points today");
-        await this.setNumber(this.profileKey("pointsToday"), value);
-    }
-
-    async getPointsToday(): Promise<number> {
-        const value = await this.getOptionalNumber(
-            this.profileKey("pointsToday")
-        );
-        if (value !== undefined) return value;
-        return (await this.getLegacyPointHistory()).today ?? 0;
-    }
-
-    async setPointsThisWeek(value: number): Promise<void> {
-        requireNonNegativeInteger(value, "Points this week");
-        await this.setNumber(this.profileKey("pointsThisWeek"), value);
-    }
-
-    async getPointsThisWeek(): Promise<number> {
-        const value = await this.getOptionalNumber(
-            this.profileKey("pointsThisWeek")
-        );
-        if (value !== undefined) return value;
-        return (await this.getLegacyPointHistory()).thisWeek ?? 0;
-    }
-
-    async setPointsThisMonth(value: number): Promise<void> {
-        requireNonNegativeInteger(value, "Points this month");
-        await this.setNumber(this.profileKey("pointsThisMonth"), value);
-    }
-
-    async getPointsThisMonth(): Promise<number> {
-        const value = await this.getOptionalNumber(
-            this.profileKey("pointsThisMonth")
-        );
-        if (value !== undefined) return value;
-        return (await this.getLegacyPointHistory()).thisMonth ?? 0;
-    }
-
-    async setPointsThisYear(value: number): Promise<void> {
-        requireNonNegativeInteger(value, "Points this year");
-        await this.setNumber(this.profileKey("pointsThisYear"), value);
-    }
-
-    async getPointsThisYear(): Promise<number> {
-        const value = await this.getOptionalNumber(
-            this.profileKey("pointsThisYear")
-        );
-        if (value !== undefined) return value;
-        return (await this.getLegacyPointHistory()).thisYear ?? 0;
-    }
-
-    async setPointHistory(value: PointHistory): Promise<void> {
+        const { dayStart } = getUTCPointHistoryPeriodStarts();
         await Promise.all([
-            this.setPointsToday(value.today),
-            this.setPointsThisWeek(value.thisWeek),
-            this.setPointsThisMonth(value.thisMonth),
-            this.setPointsThisYear(value.thisYear),
-            this.setVipPoints(value.allTime),
+            this.setNumber(this.profileKey("pointsToday"), value),
             this.context.redis.set(
-                this.profileKey("pointHistory"),
-                JSON.stringify(value)
+                this.profileKey("pointHistoryDayStartUTC"),
+                dayStart.toString()
             ),
         ]);
     }
 
+    async getPointsToday(): Promise<number> {
+        await this.ensurePointHistoryPeriods();
+        return this.getNumber(this.profileKey("pointsToday"));
+    }
+
+    async setPointsThisWeek(value: number): Promise<void> {
+        requireNonNegativeInteger(value, "Points this week");
+        const { weekStart } = getUTCPointHistoryPeriodStarts();
+        await Promise.all([
+            this.setNumber(this.profileKey("pointsThisWeek"), value),
+            this.context.redis.set(
+                this.profileKey("pointHistoryWeekStartUTC"),
+                weekStart.toString()
+            ),
+        ]);
+    }
+
+    async getPointsThisWeek(): Promise<number> {
+        await this.ensurePointHistoryPeriods();
+        return this.getNumber(this.profileKey("pointsThisWeek"));
+    }
+
+    async setPointsThisMonth(value: number): Promise<void> {
+        requireNonNegativeInteger(value, "Points this month");
+        const { monthStart } = getUTCPointHistoryPeriodStarts();
+        await Promise.all([
+            this.setNumber(this.profileKey("pointsThisMonth"), value),
+            this.context.redis.set(
+                this.profileKey("pointHistoryMonthStartUTC"),
+                monthStart.toString()
+            ),
+        ]);
+    }
+
+    async getPointsThisMonth(): Promise<number> {
+        await this.ensurePointHistoryPeriods();
+        return this.getNumber(this.profileKey("pointsThisMonth"));
+    }
+
+    async setPointsThisYear(value: number): Promise<void> {
+        requireNonNegativeInteger(value, "Points this year");
+        const { yearStart } = getUTCPointHistoryPeriodStarts();
+        await Promise.all([
+            this.setNumber(this.profileKey("pointsThisYear"), value),
+            this.context.redis.set(
+                this.profileKey("pointHistoryYearStartUTC"),
+                yearStart.toString()
+            ),
+        ]);
+    }
+
+    async getPointsThisYear(): Promise<number> {
+        await this.ensurePointHistoryPeriods();
+        return this.getNumber(this.profileKey("pointsThisYear"));
+    }
+
+    async setPointHistory(value: PointHistory): Promise<void> {
+        requireNonNegativeInteger(value.today, "Points today");
+        requireNonNegativeInteger(value.thisWeek, "Points this week");
+        requireNonNegativeInteger(value.thisMonth, "Points this month");
+        requireNonNegativeInteger(value.thisYear, "Points this year");
+        requireNonNegativeInteger(value.allTime, "All-time VIP points");
+
+        const now = Date.now();
+        const { dayStart, weekStart, monthStart, yearStart } =
+            getUTCPointHistoryPeriodStarts(now);
+        const vipPointsKey = await USER_VIP_POINTS_KEY(this.user);
+
+        await Promise.all([
+            this.context.redis.set(
+                this.profileKey("pointsToday"),
+                value.today.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointsThisWeek"),
+                value.thisWeek.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointsThisMonth"),
+                value.thisMonth.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointsThisYear"),
+                value.thisYear.toString()
+            ),
+            this.context.redis.set(vipPointsKey, value.allTime.toString()),
+            this.context.redis.set(
+                this.profileKey("pointHistoryDayStartUTC"),
+                dayStart.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointHistoryWeekStartUTC"),
+                weekStart.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointHistoryMonthStartUTC"),
+                monthStart.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointHistoryYearStartUTC"),
+                yearStart.toString()
+            ),
+            this.context.redis.set(
+                this.profileKey("pointHistory"),
+                JSON.stringify(value)
+            ),
+            this.touchLastUpdated(now),
+        ]);
+    }
+
     async getPointHistory(): Promise<PointHistory> {
+        await this.ensurePointHistoryPeriods();
+
         const [today, thisWeek, thisMonth, thisYear, allTime] =
             await Promise.all([
-                this.getPointsToday(),
-                this.getPointsThisWeek(),
-                this.getPointsThisMonth(),
-                this.getPointsThisYear(),
+                this.getNumber(this.profileKey("pointsToday")),
+                this.getNumber(this.profileKey("pointsThisWeek")),
+                this.getNumber(this.profileKey("pointsThisMonth")),
+                this.getNumber(this.profileKey("pointsThisYear")),
                 this.getVipPoints(),
             ]);
 
-        return { today, thisWeek, thisMonth, thisYear, allTime };
+        const history = { today, thisWeek, thisMonth, thisYear, allTime };
+
+        await this.context.redis.set(
+            this.profileKey("pointHistory"),
+            JSON.stringify(history)
+        );
+
+        return history;
     }
 
     // ---------------------------------------------------------------------
@@ -1303,6 +1544,7 @@ export class UserProfile {
             this.context.redis.hSet(UserProfile.VIP_INDEX_KEY, {
                 [this.user.username]: storedValue,
             }),
+            this.touchLastUpdated(),
         ]);
     }
 
@@ -1319,7 +1561,7 @@ export class UserProfile {
         const parsed = Number(value);
         if (!Number.isFinite(parsed) || parsed < 0) return undefined;
         if (parsed <= Date.now()) {
-            await this.removeVIP();
+            await this.removeVIP(parsed);
             return undefined;
         }
         return parsed;
@@ -1420,12 +1662,13 @@ export class UserProfile {
         return this.addVIPDuration(days, "D");
     }
 
-    async removeVIP(): Promise<void> {
+    async removeVIP(updatedAt = Date.now()): Promise<void> {
         await Promise.all([
             this.context.redis.del(getVIPKey(this.user.username)),
             this.context.redis.hDel(UserProfile.VIP_INDEX_KEY, [
                 this.user.username,
             ]),
+            this.touchLastUpdated(updatedAt),
         ]);
     }
 
@@ -1498,6 +1741,15 @@ export class UserProfile {
     }
 
     async getSnapshot(): Promise<UserProfileSnapshot> {
+        // These reads can perform time-based maintenance (point-history
+        // rollover and expired-VIP cleanup), so resolve them before reading
+        // lastUpdatedAt. That keeps the displayed timestamp tied to the
+        // actual profile mutation rather than to the profile command itself.
+        const [pointHistory, vipExpiration] = await Promise.all([
+            this.getPointHistory(),
+            this.getVIPExpiration(),
+        ]);
+
         const [
             reputation,
             vipPoints,
@@ -1515,8 +1767,6 @@ export class UserProfile {
             achievements,
             achievementCatalog,
             recentAwards,
-            pointHistory,
-            vipExpiration,
         ] = await Promise.all([
             this.getReputation(),
             this.getVipPoints(),
@@ -1534,9 +1784,9 @@ export class UserProfile {
             this.getAchievements(),
             this.getAchievementCatalog(),
             this.getRecentAwards(),
-            this.getPointHistory(),
-            this.getVIPExpiration(),
         ]);
+
+        const lastUpdatedAt = await this.getLastUpdatedAt();
 
         return {
             username: this.user.username,
@@ -1558,8 +1808,10 @@ export class UserProfile {
             recentAwards,
             pointHistory,
             vipExpiration,
+            lastUpdatedAt,
         };
     }
+
 }
 
 // ============================================================================

@@ -1,5 +1,5 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
-import { Comment, TriggerContext, User } from "@devvit/public-api";
+import { TriggerContext, User } from "@devvit/public-api";
 import { AppSetting } from "./settings";
 import { logger } from "../utils/logger";
 import { getManagedFlairScore } from "../utils/common-utils";
@@ -110,24 +110,5 @@ export async function _replyToUser(
         );
     } else {
         console.warn(`${commentId}: Unknown replyMode "${replyMode}"`);
-    }
-}
-
-export async function getParentComment(
-    event: CommentSubmit | CommentUpdate,
-    context: TriggerContext
-): Promise<Comment | undefined> {
-    let parentComment: Comment | undefined;
-    if (!event.comment) return undefined;
-    try {
-        parentComment = await context.reddit.getCommentById(
-            event.comment.parentId
-        );
-        return parentComment;
-    } catch {
-        parentComment = undefined;
-    }
-    if (!parentComment) {
-        return undefined;
     }
 }

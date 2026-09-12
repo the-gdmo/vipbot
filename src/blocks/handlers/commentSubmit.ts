@@ -292,7 +292,7 @@ export async function onCommentSubmit(
         if (infoCommand) {
             await executeInfoCommand(event, context, user, prefix);
         } else if (helpCommand) {
-            await executeHelpCommand(event, user, isMod, prefix, context);
+            await executeHelpCommand(event, user, isMod, context);
         } else if (profileCommand) {
             await executeProfileCommand(event, context, user);
         } else if (userProfileCommand) {
