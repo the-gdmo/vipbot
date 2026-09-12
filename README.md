@@ -1213,6 +1213,8 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 ---
 
 ## Version History
+### 1.0.3
+* Add "Moderators Exempt From Flairing?" option (by default, mods are exempt from flair management)
 ### 1.0.2
 * Update default settings
 ### 1.0.1

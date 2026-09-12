@@ -59,7 +59,6 @@ export enum AppSetting {
     DigestFrequency = "digestFrequency",
     DigestAsModNotification = "digestAsModNotification",
     UpgradeNotifier = "upgradeNotifier",
-    ExistingFlairHandling = "existingFlairHandling",
     CSSClass = "CSSClass",
     FlairTemplate = "flairTemplate",
     LevelThresholds = "levelThresholds",
@@ -120,6 +119,7 @@ export enum AppSetting {
     AccountsThatWillNotBeManaged = "accountsThatWillNotBeManaged",
     NominationsToBecomeVipUser = "nominationsToBecomeVipUser",
     UserBecameSuperuserFromNominationsMessage = "userBecameSuperuserFromNominationsMessage",
+    ModsExemptFromFlairing = "modsExemptFromFlairing",
 }
 
 export enum TemplateDefaults {
@@ -735,12 +735,6 @@ const NotifyOnModAwardFailOptionChoices = [
         value: NotifyOnModAwardFailReplyOptions.ReplyAsComment,
     },
 ];
-
-export enum ExistingFlairOverwriteHandling {
-    OverwriteNumericSymbol = "overwritenumericsymbol",
-    OverwriteNumeric = "overwritenumeric",
-    NeverSet = "neverset",
-}
 
 export type AchievementCategorySpec = {
     key: AppSetting;
@@ -1451,6 +1445,13 @@ export const appSettings: SettingsFormField[] = [
                     "How much to increment a user's score by when they make a new comment. Set to 0 to disable",
                 defaultValue: 0,
                 onValidate: numberFieldHasValidOption,
+            },
+            {
+                type: "boolean",
+                name: AppSetting.ModsExemptFromFlairing,
+                label: "Moderators Exempt From Flairing?",
+                helpText: `Whether or not mods will be flaired by the bot based on the "Flair Formatting" option`,
+                defaultValue: true,
             },
             {
                 type: "string",
