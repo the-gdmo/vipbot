@@ -8,16 +8,16 @@ import {
 } from "../config/settings";
 import { formatMessage } from "../utils/formatting";
 import {
-    getCurrentScore,
+    getManagedFlairScore,
     getParentComment,
     ScoreResult,
-    setUserScoreOnCommentSubmit,
+    setManagedFlairScoreOnCommentSubmit,
     userHasPermission,
 } from "../utils/common-utils";
-
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { TriggerContext, User } from "@devvit/public-api";
 import { logger } from "../utils/logger";
+import { UserProfile } from "../config/userProfile";
 import {
     getUserIsSuperuser,
     isModerator,
@@ -26,27 +26,49 @@ import {
     executeAchievementCommand,
     executeBalanceCommand,
     executeCoinLeaderboardCommand,
-    executeGiftPointsCommand,
+    executeGiveCoinsCommand,
     executeHelpCommand,
     executeInfoCommand,
     executeLeaderboardCommand,
+    executeLevelLeaderboardCommand,
+    executeMonthlyXPLeaderboardCommand,
     executeNominateCommand,
     executeProfileCommand,
     executeRankCommand,
     executeRepLeaderboardCommand,
     executeStreakCommand,
+    executeStreakLeaderboardCommand,
+    executeStoreCommand,
     executeUserProfileCommand,
     executeUserRankCommand,
     executeVIPCommand,
+    executeWeeklyXPLeaderboardCommand,
     executeXPLeaderboardCommand,
 } from "../config/commandExecutors";
 
-/**
- * Handles newly submitted comments.
- *
- * This is the main entry point for VIPBot comment processing.
- */
+async function replyToVIPBotCommand(
+    event: CommentSubmit | CommentUpdate,
+    context: TriggerContext,
+    text: string
+): Promise<void> {
+    if (!event.comment) return;
 
+    const reply = await context.reddit.submitComment({
+        id: event.comment.id,
+        text: formatMessage(event, text, {}),
+    });
+
+    await reply.distinguish();
+}
+
+/**
+ * Handles newly submitted comments and comment updates.
+ *
+ * Managed flair score is intentionally separate from UserProfile reputation,
+ * XP, and coins. This handler only touches the managed flair score for the
+ * configured automatic comment increment. UserProfile-backed commands are
+ * delegated to commandExecutors.ts.
+ */
 export async function onCommentSubmit(
     event: CommentSubmit | CommentUpdate,
     context: TriggerContext
@@ -66,159 +88,95 @@ export async function onCommentSubmit(
     // REQUIRED EVENT DATA
     // ============================================================
 
-    logger.debug("🔍 Getting parent comment", {
-        commentId: event.comment?.id,
-        postId: event.post?.id,
-    });
-
-    const parentComment = await getParentComment(event, context);
-
-    if (
-        !event.author ||
-        !event.comment ||
-        !event.post ||
-        !event.subreddit ||
-        !parentComment
-    ) {
+    if (!event.author || !event.comment || !event.post || !event.subreddit) {
         logger.warn("❌ Missing required event data", {
             hasAuthor: !!event.author,
             hasComment: !!event.comment,
             hasPost: !!event.post,
             hasSubreddit: !!event.subreddit,
-            hasParentComment: !!parentComment,
         });
-
         return;
     }
 
-    logger.debug("✅ Required event data available", {
-        author: event.author.name,
-        commentId: event.comment.id,
-        postId: event.post.id,
-        subreddit: event.subreddit.name,
-        parentCommentId: parentComment.id,
-        parentAuthor: parentComment.authorName,
-    });
-
     // ============================================================
-    // SETTINGS
+    // SETTINGS / BASIC CONTEXT
     // ============================================================
 
     const settings = await context.settings.getAll();
-
     const increment = (settings[AppSetting.CommentIncrement] as number) ?? 0;
-
     const prefix = (settings[AppSetting.CommandPrefix] as string) ?? "/";
-
     const pointName = (settings[AppSetting.PointName] as string) ?? "point";
+    const pointCommandName = (
+        (settings[AppSetting.PointCommand] as string | undefined) ??
+        TemplateDefaults.PointCommand
+    ).trim();
+    const configuredVipPointAwardAmount =
+        (settings[AppSetting.PointCommandVIPPointAmount] as
+            | number
+            | undefined) ?? 1;
+    const configuredCoinAwardAmount =
+        (settings[AppSetting.PointCommandCoinAmount] as number | undefined) ??
+        1;
+    const vipPointAwardAmount =
+        Number.isSafeInteger(configuredVipPointAwardAmount) &&
+        configuredVipPointAwardAmount > 0
+            ? configuredVipPointAwardAmount
+            : 1;
+    const coinAwardAmount =
+        Number.isSafeInteger(configuredCoinAwardAmount) &&
+        configuredCoinAwardAmount > 0
+            ? configuredCoinAwardAmount
+            : 1;
 
     const commentBody = event.comment.body.trim();
     const commentAuthor = event.author.name;
-    const recipient = parentComment.authorName;
-
-    // The bot should be able to run through the normal comment handler,
-    // including command processing, but it must never receive the automatic
-    // comment-increment points.
 
     const botsThatWillNotBeManaged =
         (settings[AppSetting.AccountsThatWillNotBeManaged] as string) ??
         TemplateDefaults.AccountsThatWillNotBeManaged;
-    const normalizedCommentAuthor = commentAuthor.trim().toLowerCase();
-    const normalizedBotName = botsThatWillNotBeManaged.trim().toLowerCase();
 
-    const isBotUser =
-        normalizedCommentAuthor === normalizedBotName ||
-        normalizedCommentAuthor === "automoderator";
+    const normalizedCommentAuthor = commentAuthor.trim().toLowerCase();
+    const excludedAccounts = botsThatWillNotBeManaged
+        .split(/\r?\n|,/)
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+
+    const isBotUser = excludedAccounts.includes(normalizedCommentAuthor);
 
     if (isBotUser) {
-        logger.debug("🤖 Comment author is bot, returning.", {
+        logger.debug("🤖 Bot comment ignored", {
             commentAuthor,
-            botName: context.appSlug,
         });
         return;
     }
 
     // ============================================================
-    // COMMENTOR
-    // ============================================================
-
-    let commentor: User | undefined;
-    try {
-        logger.debug("👤 Looking up awarder", {
-            username: event.author.name,
-        });
-
-        commentor = await context.reddit.getUserByUsername(event.author.name);
-    } catch (err) {
-        logger.warn("⚠️ Failed to look up author", {
-            username: commentAuthor,
-            error: err,
-        });
-
-        commentor = undefined;
-    }
-
-    if (!commentor) {
-        logger.warn("❌ Awarder could not be resolved");
-        return;
-    }
-
-    // ============================================================
-    // USER
+    // RESOLVE COMMENT AUTHOR
     // ============================================================
 
     let user: User | undefined;
 
     try {
-        logger.debug("👤 Looking up author", {
-            username: commentAuthor,
-        });
-
         user = await context.reddit.getUserByUsername(commentAuthor);
-
-        logger.debug("✅ Author lookup successful", {
-            username: user?.username,
-        });
-    } catch (err) {
-        logger.warn("⚠️ Failed to look up author", {
+    } catch (error) {
+        logger.warn("⚠️ Failed to look up comment author", {
             username: commentAuthor,
-            err,
+            error,
         });
-
-        user = undefined;
     }
 
     if (!user) {
-        logger.warn("❌ Author could not be resolved", {
+        logger.warn("❌ Comment author could not be resolved", {
             commentAuthor,
         });
-
         return;
     }
 
-    logger.debug("⚙️ Loaded command settings", {
-        prefix,
-        increment,
-        pointName,
-        commentAuthor,
-        recipient,
-        commentBody,
-    });
-
-    // ============================================================
-    // GET USER STATUS
-    // ============================================================
     const isMod = await isModerator(
         context,
         context.subredditName,
         user.username
     );
-
-    await userHasPermission(event, user.id, user.username, context, settings);
-
-    // ============================================================
-    // CONTEXT
-    // ============================================================
 
     const bodySplit = commentBody
         .split(/\s+/)
@@ -227,9 +185,240 @@ export async function onCommentSubmit(
 
     logger.debug("🧩 Comment context initialized", {
         bodySplit,
-        bodySplitLength: bodySplit.length,
         isMod,
+        isBotUser,
+        increment,
     });
+
+    // ============================================================
+    // COMMAND DETECTION
+    //
+    // Commands are deliberately handled BEFORE any managed-flair score,
+    // self-award, duplicate-award, or blocked-awarder logic. A command must
+    // never accidentally receive the normal comment increment.
+    // ============================================================
+
+    const normalizedPrefix = prefix.toLowerCase();
+
+    const isCommand = (name: string): boolean => {
+        const escapedPrefix = normalizedPrefix.replaceAll(/[.*]/gi, "\\$&");
+        const escapedName = name.toLowerCase().replaceAll(/[.*]/gi, "\\$&");
+
+        logger.info(`isCommand() values`, { escapedPrefix, escapedName });
+
+        const commandRegex = new RegExp(`${escapedPrefix}${escapedName}`, "i");
+
+        return commandRegex.test(commentBody);
+    };
+    const isUserToken = (value: string | undefined): boolean =>
+        !!value && /u\/[0-9a-z_-]{3,21}.*/i.test(value);
+
+    const infoCommand = isCommand("info") && bodySplit.length === 1;
+    const helpCommand = isCommand("help") && bodySplit.length === 1;
+    const profileCommand = isCommand("profile") && bodySplit.length === 1;
+    const userProfileCommand =
+        isCommand("profile") &&
+        bodySplit.length === 2 &&
+        isUserToken(bodySplit[1]);
+    const rankCommand = isCommand("rank") && bodySplit.length === 1;
+    const userRankCommand =
+        isCommand("rank") &&
+        bodySplit.length === 2 &&
+        isUserToken(bodySplit[1]);
+    const balanceCommand = isCommand("balance") && bodySplit.length === 1;
+    const achievementsCommand =
+        isCommand("achievements") && bodySplit.length === 1;
+    const streakCommand = isCommand("streak") && bodySplit.length === 1;
+    const vipsCommand = isCommand("vips") && bodySplit.length === 1;
+    const storeCommand = isCommand("store");
+    const pointReplyAwardCommand = isCommand(pointCommandName);
+    const nominateCommand =
+        isCommand("nominate") &&
+        bodySplit.length === 2 &&
+        isUserToken(bodySplit[1]);
+
+    const leaderboardType =
+        isCommand("leaderboard") && bodySplit.length === 2
+            ? (bodySplit[1] ?? "").toLowerCase()
+            : undefined;
+    const xpLeaderboardCommand = leaderboardType === "xp";
+    const weeklyXPLeaderboardCommand = leaderboardType === "weeklyxp";
+    const monthlyXPLeaderboardCommand = leaderboardType === "monthlyxp";
+    const coinLeaderboardCommand = leaderboardType === "coins";
+    const repLeaderboardCommand = /^rep(utation)?$/i.test(
+        leaderboardType ?? ""
+    );
+    const levelLeaderboardCommand = leaderboardType === "level";
+    const streakLeaderboardCommand = leaderboardType === "streak";
+    const leaderboardCommand =
+        isCommand("leaderboard") && bodySplit.length === 1;
+
+    const giveCoinsCommand =
+        isCommand("givecoins") &&
+        bodySplit.length === 3 &&
+        isUserToken(bodySplit[1]) &&
+        !!bodySplit[2];
+
+    const isBotCommand =
+        infoCommand ||
+        helpCommand ||
+        profileCommand ||
+        userProfileCommand ||
+        rankCommand ||
+        userRankCommand ||
+        balanceCommand ||
+        achievementsCommand ||
+        leaderboardCommand ||
+        xpLeaderboardCommand ||
+        weeklyXPLeaderboardCommand ||
+        monthlyXPLeaderboardCommand ||
+        coinLeaderboardCommand ||
+        repLeaderboardCommand ||
+        levelLeaderboardCommand ||
+        streakLeaderboardCommand ||
+        streakCommand ||
+        vipsCommand ||
+        storeCommand ||
+        nominateCommand ||
+        giveCoinsCommand;
+
+    if (isBotCommand) {
+        logger.info("🤖 Valid VIPBot command detected", {
+            commandBody: commentBody,
+            user: user.username,
+            isMod,
+        });
+
+        if (infoCommand) {
+            await executeInfoCommand(event, context, user, prefix);
+        } else if (helpCommand) {
+            await executeHelpCommand(event, user, isMod, prefix, context);
+        } else if (profileCommand) {
+            await executeProfileCommand(event, context, user);
+        } else if (userProfileCommand) {
+            await executeUserProfileCommand(event, context, bodySplit[1]!);
+        } else if (rankCommand) {
+            await executeRankCommand(event, context, user);
+        } else if (userRankCommand) {
+            const targetUsername = bodySplit[1]!.replace(/^u\//i, "");
+            let target: User | undefined;
+
+            try {
+                target = await context.reddit.getUserByUsername(targetUsername);
+            } catch (error) {
+                logger.warn("⚠️ Rank target could not be resolved", {
+                    targetUsername,
+                    error,
+                });
+            }
+
+            if (target) {
+                await executeUserRankCommand(event, context, target);
+            }
+        } else if (balanceCommand) {
+            await executeBalanceCommand(event, context, user);
+        } else if (achievementsCommand) {
+            await executeAchievementCommand(event, context, user);
+        } else if (xpLeaderboardCommand) {
+            await executeXPLeaderboardCommand(event, context, user);
+        } else if (weeklyXPLeaderboardCommand) {
+            await executeWeeklyXPLeaderboardCommand(event, context, user);
+        } else if (monthlyXPLeaderboardCommand) {
+            await executeMonthlyXPLeaderboardCommand(event, context, user);
+        } else if (coinLeaderboardCommand) {
+            await executeCoinLeaderboardCommand(event, context, user);
+        } else if (repLeaderboardCommand) {
+            await executeRepLeaderboardCommand(event, context, user);
+        } else if (levelLeaderboardCommand) {
+            await executeLevelLeaderboardCommand(event, context, user);
+        } else if (streakLeaderboardCommand) {
+            await executeStreakLeaderboardCommand(event, context, user);
+        } else if (leaderboardCommand) {
+            await executeLeaderboardCommand(event, context, user);
+        } else if (streakCommand) {
+            await executeStreakCommand(event, context, user);
+        } else if (vipsCommand) {
+            await executeVIPCommand(event, context, user);
+        } else if (storeCommand) {
+            await executeStoreCommand(event, context, user, bodySplit);
+        } else if (nominateCommand) {
+            await executeNominateCommand(event, context, user, isMod);
+        } else if (giveCoinsCommand) {
+            await executeGiveCoinsCommand(event, context, user, bodySplit);
+        }
+
+        return;
+    }
+
+    if (!("previousBody" in event)) {
+        try {
+            await new UserProfile(user, context).recordActivity("comment");
+        } catch (error) {
+            logger.error("❌ Failed to record VIPBot comment activity", {
+                user: user.username,
+                error,
+            });
+        }
+    }
+
+    // ============================================================
+    // LEGACY MANAGED-FLAIR / AWARD CONTEXT
+    //
+    // Everything above this point is independent of the legacy point-award
+    // system. Resolve the parent only when entering that legacy path.
+    // ============================================================
+
+    const parentComment = await getParentComment(event, context);
+
+    if (!parentComment) {
+        logger.warn(
+            "❌ Parent comment could not be resolved for award processing",
+            {
+                commentId: event.comment.id,
+                postId: event.post.id,
+            }
+        );
+        return;
+    }
+
+    const recipient = parentComment.authorName;
+
+    // ============================================================
+    // AWARD / POINT PERMISSION
+    // ============================================================
+
+    const hasPermission = await userHasPermission(
+        event,
+        user.id,
+        user.username,
+        context,
+        settings
+    );
+
+    if (!hasPermission) {
+        logger.debug("❌ User does not have permission for award processing", {
+            commentAuthor,
+            commentId: event.comment.id,
+        });
+        return;
+    }
+
+    const recipientIsBot = excludedAccounts.includes(
+        recipient.trim().toLowerCase()
+    );
+
+    // ============================================================
+    // BOT USERS
+    // ============================================================
+
+    if (recipientIsBot) {
+        await replyToVIPBotCommand(
+            event,
+            context,
+            `You do not have permission to award a(n) ${pointName} to u/${recipient}.`
+        );
+        return;
+    }
 
     // ============================================================
     // BLOCKED USERS
@@ -239,16 +428,14 @@ export async function onCommentSubmit(
         (settings[AppSetting.UsersWhoCannotAwardPoints] as string) ?? ""
     )
         .split(/\r?\n/)
-        .map((w) => w.trim())
+        .map((value) => value.trim())
         .filter(Boolean);
 
-    logger.debug("🚫 Checking blocked-user list", {
-        commentAuthor,
-        blockedUsers,
-        isBlocked: blockedUsers.includes(commentAuthor),
-    });
+    const isBlocked = blockedUsers.some(
+        (blocked) => blocked.toLowerCase() === normalizedCommentAuthor
+    );
 
-    if (blockedUsers.includes(commentAuthor)) {
+    if (isBlocked) {
         logger.warn("🚫 User is blocked from awarding points", {
             commentAuthor,
             recipient,
@@ -258,39 +445,22 @@ export async function onCommentSubmit(
         const blockedTemplate =
             (settings[AppSetting.UsersWhoCannotAwardPointsMessage] as string) ??
             TemplateDefaults.UsersWhoCannotAwardPointsMessage;
-
-        const notifyBlockedUserMode = (
+        const notifyMode = (
             settings[AppSetting.NotifyOnBlockedUser] as string[]
         )?.[0];
-
         const blockedMessage = formatMessage(event, blockedTemplate, {
             name: pointName,
             commentAuthor,
             subreddit: event.subreddit.name,
         });
 
-        logger.debug("📨 Sending blocked-user notification", {
-            commentAuthor,
-            mode: notifyBlockedUserMode,
-        });
-
-        if (
-            notifyBlockedUserMode ===
-            NotifyOnBlockedUserReplyOptions.ReplyAsComment
-        ) {
+        if (notifyMode === NotifyOnBlockedUserReplyOptions.ReplyAsComment) {
             const message = await context.reddit.submitComment({
                 id: event.comment.id,
                 text: blockedMessage,
             });
-
             await message.distinguish();
-
-            logger.info("💬 Posted blocked-user response", {
-                commentAuthor,
-            });
-        } else if (
-            notifyBlockedUserMode === NotifyOnBlockedUserReplyOptions.ReplyByPM
-        ) {
+        } else if (notifyMode === NotifyOnBlockedUserReplyOptions.ReplyByPM) {
             await context.reddit.sendPrivateMessage({
                 to: commentAuthor,
                 text: blockedMessage,
@@ -298,136 +468,322 @@ export async function onCommentSubmit(
                     `You do not have permission to award ${pointName}s ` +
                     `in r/${event.subreddit.name}`,
             });
-
-            logger.info("📨 Sent blocked-user PM", {
-                commentAuthor,
-            });
         }
 
         return;
     }
 
     // ============================================================
-    // COMMENT INCREMENT COMMAND REQUIREMENT
+    // CONFIGURABLE POINT-COMMAND REPLY AWARD — VIP POINTS + COINS
     // ============================================================
 
-    const incrementedKey = `incremented:${user.username}:${parentComment.id}`;
-
-    if (increment !== 0 && !isBotUser && !("previousBody" in event)) {
-        await context.redis.set(incrementedKey, "1");
-
-        logger.debug("🔢 Comment increment is enabled", {
-            increment,
-            incrementedKey,
-        });
-
-        const currentScore = await getCurrentScore(user, context);
-
-        if (!currentScore) {
-            logger.error(`currentScore couldn't be found, returning.`);
+    if (pointReplyAwardCommand) {
+        if (bodySplit.length !== 1) {
+            await replyToVIPBotCommand(
+                event,
+                context,
+                `Usage: \`${prefix}${pointCommandName}\`.`
+            );
             return;
         }
-        const newScore: ScoreResult = {
-            score: currentScore.score + increment,
-            userHasFlair: currentScore.userHasFlair,
-            flairIsNumber: currentScore.flairIsNumber,
-        };
 
-        setUserScoreOnCommentSubmit(
-            event,
-            context,
-            user.username,
-            newScore,
-            settings
-        );
-
-        const userIsSuperUser = await getUserIsSuperuser(
-            event,
-            context,
-            user.username
-        );
-        if (userIsSuperUser) {
-            const threshold =
-                (settings[AppSetting.AutoSuperuserThreshold] as number) ?? 0;
-            const superUserTemplate = formatMessage(
-                event,
-                (settings[AppSetting.AutoSuperuserTemplate] as string) ??
-                    TemplateDefaults.AutoSuperuserTemplate,
+        if ("previousBody" in event) {
+            logger.debug(
+                "Ignoring pointCommand reply award on edited comment",
                 {
-                    awardee: commentor.username,
-                    threshold: new Intl.NumberFormat("en").format(threshold),
+                    commentId: event.comment.id,
+                    user: user.username,
                 }
             );
-            const superUserKey = `superUserMessageSent:${commentor.username}`;
-            await context.redis.del(superUserKey);
+            return;
+        }
 
-            const superUserKeyExists = await context.redis.exists(superUserKey);
-            if (superUserKeyExists) {
-                logger.info(`User is already superuser, returning.`, {
-                    user: commentor.username,
+        if (normalizedCommentAuthor === recipient.trim().toLowerCase()) {
+            await replyToVIPBotCommand(
+                event,
+                context,
+                `You do not have permission to award yourself a(n) ${pointName}.`
+            );
+            return;
+        }
+
+        const coinsEnabled =
+            (settings[AppSetting.CoinsEnabled] as boolean | undefined) ?? true;
+        if (!coinsEnabled) {
+            await replyToVIPBotCommand(
+                event,
+                context,
+                "VIP Coins are disabled here, so the combined point reply award cannot be applied."
+            );
+            return;
+        }
+
+        let recipientUser: User | undefined;
+        try {
+            recipientUser = await context.reddit.getUserByUsername(recipient);
+        } catch (error) {
+            logger.warn("⚠️ Point-command recipient could not be resolved", {
+                recipient,
+                error,
+            });
+        }
+
+        if (!recipientUser) {
+            await replyToVIPBotCommand(
+                event,
+                context,
+                "I couldn't resolve the author of the comment you replied to."
+            );
+            return;
+        }
+
+        const rewardKey =
+            `vipbot:replyReward:point:${parentComment.id}:` +
+            normalizedCommentAuthor;
+        const legacyCoinRewardKey =
+            `vipbot:replyReward:coin:${parentComment.id}:` +
+            normalizedCommentAuthor;
+        const legacyVipPointRewardKey =
+            `vipbot:replyReward:vip-point:${parentComment.id}:` +
+            normalizedCommentAuthor;
+
+        const [alreadyRewarded, legacyCoinRewarded, legacyVipPointRewarded] =
+            await Promise.all([
+                context.redis.exists(rewardKey),
+                context.redis.exists(legacyCoinRewardKey),
+                context.redis.exists(legacyVipPointRewardKey),
+            ]);
+
+        if (alreadyRewarded || legacyCoinRewarded || legacyVipPointRewarded) {
+            await replyToVIPBotCommand(
+                event,
+                context,
+                "You already used your reply award on this comment."
+            );
+            return;
+        }
+
+        const awarderProfile = new UserProfile(user, context);
+        const recipientProfile = new UserProfile(recipientUser, context);
+        let coinAdded = false;
+        let vipPointAdded = false;
+        let receivedAdded = false;
+        let givenAdded = false;
+        let newCoinBalance = 0;
+        let totalVipPoints = 0;
+
+        try {
+            newCoinBalance = await recipientProfile.adjustCoins(
+                coinAwardAmount
+            );
+            coinAdded = true;
+            totalVipPoints = await recipientProfile.adjustVipPoints(
+                vipPointAwardAmount
+            );
+            vipPointAdded = true;
+            await recipientProfile.adjustVipPointsReceived(vipPointAwardAmount);
+            receivedAdded = true;
+            await awarderProfile.adjustVipPointsGiven(vipPointAwardAmount);
+            givenAdded = true;
+        } catch (error) {
+            try {
+                if (givenAdded)
+                    await awarderProfile.adjustVipPointsGiven(
+                        -vipPointAwardAmount
+                    );
+                if (receivedAdded)
+                    await recipientProfile.adjustVipPointsReceived(
+                        -vipPointAwardAmount
+                    );
+                if (vipPointAdded)
+                    await recipientProfile.adjustVipPoints(
+                        -vipPointAwardAmount
+                    );
+                if (coinAdded)
+                    await recipientProfile.adjustCoins(-coinAwardAmount);
+            } catch (rollbackError) {
+                logger.error("🚨 pointCommand reply award rollback failed", {
+                    awarder: user.username,
+                    recipient: recipientUser.username,
+                    parentCommentId: parentComment.id,
+                    rollbackError,
+                });
+            }
+
+            logger.error("❌ pointCommand reply award failed", {
+                awarder: user.username,
+                recipient: recipientUser.username,
+                parentCommentId: parentComment.id,
+                vipPointAwardAmount,
+                coinAwardAmount,
+                error,
+            });
+            await replyToVIPBotCommand(
+                event,
+                context,
+                "The combined VIP-point and coin reply award could not be applied."
+            );
+            return;
+        }
+
+        await context.redis.set(rewardKey, "1");
+        await Promise.all([
+            awarderProfile.recordPointCommandAwardGiven(),
+            recipientProfile.recordPointCommandAwardReceived(),
+        ]);
+        await Promise.all([
+            awarderProfile.evaluateAchievements(),
+            recipientProfile.evaluateAchievements(),
+        ]);
+        await recipientProfile.addRecentAward({
+            date: new Date().toISOString(),
+            awardedBy: user.username,
+            points: vipPointAwardAmount,
+        });
+        await recipientProfile.writeAudit(
+            "point_command_reply_award",
+            {
+                vipPointAmount: vipPointAwardAmount,
+                coinAmount: coinAwardAmount,
+                sourceCommentId: parentComment.id,
+                vipPoints: totalVipPoints,
+                coinBalance: newCoinBalance,
+            },
+            user.username
+        );
+
+        const vipPointLabel = `VIP point${
+            vipPointAwardAmount === 1 ? "" : "s"
+        }`;
+        const coinLabel = `coin${coinAwardAmount === 1 ? "" : "s"}`;
+        await replyToVIPBotCommand(
+            event,
+            context,
+            `⭐🪙 **u/${
+                recipientUser.username
+            }** received **${new Intl.NumberFormat("en").format(
+                vipPointAwardAmount
+            )} ${vipPointLabel}** and **${new Intl.NumberFormat("en").format(
+                coinAwardAmount
+            )} ${coinLabel}** from **u/${user.username}**.`
+        );
+        return;
+    }
+
+    // ============================================================
+    // AUTOMATIC COMMENT INCREMENT — MANAGED FLAIR SCORE ONLY
+    // ============================================================
+
+    const incrementedKey = `incremented:${user.username}:${event.comment.id}`;
+    const isCommentUpdate = "previousBody" in event;
+
+    if (increment !== 0 && !isCommentUpdate) {
+        const alreadyIncremented = await context.redis.exists(incrementedKey);
+
+        if (!alreadyIncremented) {
+            await context.redis.set(incrementedKey, "1");
+
+            const currentScore = await getManagedFlairScore(user, context);
+
+            if (!currentScore) {
+                logger.error("Managed flair score could not be found", {
+                    user: user.username,
                 });
                 return;
             }
 
-            await context.redis.set(superUserKey, "1");
+            const newScore: ScoreResult = {
+                score: currentScore.score + increment,
+                userHasFlair: currentScore.userHasFlair,
+                flairIsNumber: currentScore.flairIsNumber,
+            };
 
-            logger.info(`Made user a superuser`, { user: commentor.username });
-            const notifyOnSuperuser = ((settings[
-                AppSetting.NotifyOnAutoSuperuser
-            ] as string[]) ?? [AutoSuperuserReplyOptions.NoReply])[0];
-            //comment
-            if (
-                notifyOnSuperuser === AutoSuperuserReplyOptions.ReplyAsComment
-            ) {
-                const superUserMessage = await context.reddit.submitComment({
-                    id: event.comment.id,
-                    text: superUserTemplate,
-                });
-                superUserMessage.distinguish();
-                logger.info(
-                    `Let user know via comment that they are now a superuser`,
-                    { awarder: user.username }
+            await setManagedFlairScoreOnCommentSubmit(
+                event,
+                context,
+                user.username,
+                newScore,
+                settings
+            );
+
+            await context.redis.set(incrementedKey, "1");
+
+            const userIsSuperUser = await getUserIsSuperuser(
+                event,
+                context,
+                user.username
+            );
+
+            if (userIsSuperUser) {
+                const superUserKey = `superUserMessageSent:${user.username}`;
+                const messageAlreadySent = await context.redis.exists(
+                    superUserKey
                 );
-                //dm
-            } else if (
-                notifyOnSuperuser === AutoSuperuserReplyOptions.ReplyByPM
-            ) {
-                await context.reddit.sendPrivateMessage({
-                    to: commentor.username,
-                    subject: `You are now a superuser in r/${await context.reddit.getCurrentSubredditName()}`,
-                    text: superUserTemplate,
-                });
-                logger.info(
-                    `Let user know via dm that they are now a superuser`,
-                    {
-                        user: user.username,
+
+                if (!messageAlreadySent) {
+                    await context.redis.set(superUserKey, "1");
+
+                    const threshold =
+                        (settings[
+                            AppSetting.AutoSuperuserThreshold
+                        ] as number) ?? 0;
+                    const superUserTemplate = formatMessage(
+                        event,
+                        (settings[
+                            AppSetting.AutoSuperuserTemplate
+                        ] as string) ?? TemplateDefaults.AutoSuperuserTemplate,
+                        {
+                            awardee: user.username,
+                            threshold: new Intl.NumberFormat("en").format(
+                                threshold
+                            ),
+                        }
+                    );
+                    const notifyOnSuperuser = ((settings[
+                        AppSetting.NotifyOnAutoSuperuser
+                    ] as string[]) ?? [AutoSuperuserReplyOptions.NoReply])[0];
+
+                    if (
+                        notifyOnSuperuser ===
+                        AutoSuperuserReplyOptions.ReplyAsComment
+                    ) {
+                        const superUserMessage =
+                            await context.reddit.submitComment({
+                                id: event.comment.id,
+                                text: superUserTemplate,
+                            });
+                        await superUserMessage.distinguish();
+                    } else if (
+                        notifyOnSuperuser ===
+                        AutoSuperuserReplyOptions.ReplyByPM
+                    ) {
+                        await context.reddit.sendPrivateMessage({
+                            to: user.username,
+                            subject: `You are now a superuser in r/${await context.reddit.getCurrentSubredditName()}`,
+                            text: superUserTemplate,
+                        });
                     }
-                );
-            } else if (
-                notifyOnSuperuser === AutoSuperuserReplyOptions.NoReply
-            ) {
-                logger.info(
-                    `User has been made a superuser, but was not notified`,
-                    { user: user.username }
-                );
+                }
             }
         }
-    } else if (isBotUser) {
-        logger.debug("🤖 Automatic comment-increment skipped for bot.", {
-            commentAuthor,
-            increment,
-        });
+    } else if (isCommentUpdate) {
+        await context.redis.set(incrementedKey, "1");
     }
 
     // ============================================================
     // SELF AWARD
     // ============================================================
-    const shouldSelfAward = await context.redis.exists(incrementedKey);
+
+    const incrementedKeyExists = await context.redis.exists(incrementedKey);
 
     logger.info(`Should self award?`, {
-        shouldSelfAward: shouldSelfAward === 0 ? "yes" : "no",
+        shouldSelfAward: !incrementedKeyExists ? "Yes" : "No",
     });
-    if (commentAuthor === recipient && !shouldSelfAward) {
+
+    if (
+        normalizedCommentAuthor === recipient.trim().toLowerCase() &&
+        !incrementedKeyExists
+    ) {
         logger.warn("🛑 Self-award attempt detected", {
             commentAuthor,
             recipient,
@@ -436,44 +792,27 @@ export async function onCommentSubmit(
 
         const selfAwardTemplate = formatMessage(
             event,
-            (settings[AppSetting.SelfAwardMessage] as string) ??
-                TemplateDefaults.SelfAwardMessage,
+            TemplateDefaults.SelfAwardMessage,
             {
                 awarder: commentAuthor,
                 name: pointName,
             }
         );
-
-        const notifyNormalSelfAwardMode = (
+        const notifyMode = (
             settings[AppSetting.NotifyOnSelfAward] as string[]
         )?.[0];
 
-        if (
-            notifyNormalSelfAwardMode ===
-            NotifyOnSelfAwardReplyOptions.ReplyAsComment
-        ) {
+        if (notifyMode === NotifyOnSelfAwardReplyOptions.ReplyAsComment) {
             const selfAwardComment = await context.reddit.submitComment({
                 id: event.comment.id,
                 text: selfAwardTemplate,
             });
-
             await selfAwardComment.distinguish();
-
-            logger.info("💬 Posted self-award warning", {
-                commentAuthor,
-            });
-        } else if (
-            notifyNormalSelfAwardMode ===
-            NotifyOnSelfAwardReplyOptions.ReplyByPM
-        ) {
+        } else if (notifyMode === NotifyOnSelfAwardReplyOptions.ReplyByPM) {
             await context.reddit.sendPrivateMessage({
                 to: commentAuthor,
                 text: selfAwardTemplate,
                 subject: `You tried to award yourself a ${pointName}`,
-            });
-
-            logger.info("📨 Sent self-award warning via PM", {
-                commentAuthor,
             });
         }
 
@@ -484,26 +823,16 @@ export async function onCommentSubmit(
     // DUPLICATE AWARD
     // ============================================================
 
-    const key =
+    const awardKey =
         `userAwardGiven:${parentComment.id}:` +
         `${event.post.id}:${event.subreddit.name}`;
-
-    logger.debug("🔑 Checking duplicate-award key", {
-        key,
-    });
-
-    const alreadyAwarded = await context.redis.exists(key);
-
-    logger.debug("🔍 Duplicate-award check complete", {
-        key,
-        alreadyAwarded,
-    });
+    const alreadyAwarded = await context.redis.exists(awardKey);
 
     if (alreadyAwarded) {
         logger.warn("⚠️ Point already awarded", {
             commentAuthor,
             recipient,
-            key,
+            key: awardKey,
         });
 
         const alreadyAwardedTemplate = formatMessage(
@@ -516,7 +845,6 @@ export async function onCommentSubmit(
                 name: pointName,
             }
         );
-
         const notifyMode = (
             settings[AppSetting.NotifyOnPointAlreadyAwardedToUser] as string[]
         )?.[0];
@@ -529,13 +857,7 @@ export async function onCommentSubmit(
                 id: event.comment.id,
                 text: alreadyAwardedTemplate,
             });
-
             await message.distinguish();
-
-            logger.info("💬 Posted duplicate-award response", {
-                commentAuthor,
-                recipient,
-            });
         } else if (
             notifyMode ===
             NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyByPM
@@ -547,335 +869,8 @@ export async function onCommentSubmit(
                     `has already received a ${pointName}`,
                 text: alreadyAwardedTemplate,
             });
-
-            logger.info("📨 Sent duplicate-award PM", {
-                commentAuthor,
-                recipient,
-            });
         }
 
         return;
-    }
-
-    // ============================================================
-    // GET AWARDEE
-    // ============================================================
-
-    let awardee: User | undefined;
-
-    try {
-        logger.debug("👤 Looking up awardee", {
-            recipient,
-        });
-
-        awardee = await context.reddit.getUserByUsername(recipient);
-
-        logger.debug("✅ Awardee lookup successful", {
-            recipient: awardee?.username,
-        });
-    } catch (err) {
-        logger.warn("⚠️ Failed to look up awardee", {
-            recipient,
-            err,
-        });
-
-        awardee = undefined;
-    }
-
-    if (!awardee) {
-        logger.error("❌ Awardee could not be resolved", {
-            recipient,
-        });
-
-        return;
-    }
-
-    // ============================================================
-    // COMMAND DETECTION
-    // ============================================================
-
-    // Parse the command from the first token instead of requiring an
-    // exact bodySplit.length. This allows commands with 1, 2, 3, or
-    // more arguments to be detected correctly.
-    const commandToken = (bodySplit[0] ?? "")
-        .replace(/[.!?]+$/, "")
-        .toLowerCase();
-
-    const normalizedPrefix = prefix.toLowerCase();
-
-    const isCommand = (command: string): boolean =>
-        commandToken === `${normalizedPrefix}${command.toLowerCase()}`;
-
-    const secondToken = bodySplit[1] ?? "";
-    const isTargetUser = (target: string): boolean =>
-        target.toLowerCase() === `u/${user.username.toLowerCase()}`;
-
-    const infoCommand = isCommand("info");
-    const helpCommand = isCommand("help");
-    const profileCommand = isCommand("profile") && bodySplit.length === 1;
-    const rankCommand = isCommand("rank") && bodySplit.length === 1;
-    const balanceCommand = isCommand("balance");
-    const achievementsCommand = isCommand("achievements");
-    const streakCommand = isCommand("streak");
-    const vipsCommand = isCommand("vips");
-
-    // Commands that specifically target the current user.
-    // /profile u/example
-    // /rank u/example
-    // /nominate u/example
-    const userProfileCommand =
-        isCommand("profile") && isTargetUser(secondToken);
-    const userRankCommand = isCommand("rank") && isTargetUser(secondToken);
-    const nominateCommand = isCommand("nominate") && isTargetUser(secondToken);
-
-    // More specific leaderboard commands are checked before the generic
-    // leaderboard command so /leaderboard xp does not also run the generic
-    // leaderboard handler.
-    const xpLeaderboardCommand =
-        isCommand("leaderboard") && (bodySplit[1] ?? "").toLowerCase() === "xp";
-
-    const coinLeaderboardCommand =
-        isCommand("leaderboard") &&
-        (bodySplit[1] ?? "").toLowerCase() === "coins";
-
-    const repLeaderboardCommand =
-        isCommand("leaderboard") && /^rep(utation)?$/i.test(bodySplit[1] ?? "");
-
-    const leaderboardCommand =
-        isCommand("leaderboard") &&
-        !xpLeaderboardCommand &&
-        !coinLeaderboardCommand &&
-        !repLeaderboardCommand;
-
-    logger.debug("🧪 Command detection results", {
-        commandToken,
-        bodySplit,
-        infoCommand,
-        helpCommand,
-        profileCommand,
-        userProfileCommand,
-        rankCommand,
-        userRankCommand,
-        balanceCommand,
-        achievementsCommand,
-        leaderboardCommand,
-        xpLeaderboardCommand,
-        coinLeaderboardCommand,
-        repLeaderboardCommand,
-        streakCommand,
-        vipsCommand,
-        nominateCommand,
-    });
-
-    // ============================================================
-    // MULTI-ARGUMENT COMMANDS
-    // ============================================================
-
-    let giftPointsCommand = false;
-
-    if (bodySplit.length >= 3) {
-        const target = bodySplit[1] ?? "";
-        const amount = bodySplit[2] ?? "";
-
-        // /gift u/example 10
-        // Additional tokens are allowed and passed to the executor in
-        // bodySplit, rather than causing the command to be ignored.
-        giftPointsCommand =
-            isCommand("gift") &&
-            /u\/[0-9a-z]{3,21}/i.test(target) &&
-            amount.length > 0;
-
-        logger.debug("🧪 Multi-argument command results", {
-            commandToken,
-            target,
-            thirdArg: amount,
-            bodySplit,
-            bodySplitLength: bodySplit.length,
-            giftPointsCommand,
-        });
-    }
-
-    // ============================================================
-    // DETERMINE WHETHER THIS IS A BOT COMMAND
-    // ============================================================
-
-    const isBotCommand =
-        infoCommand ||
-        helpCommand ||
-        profileCommand ||
-        rankCommand ||
-        userRankCommand ||
-        balanceCommand ||
-        achievementsCommand ||
-        leaderboardCommand ||
-        xpLeaderboardCommand ||
-        coinLeaderboardCommand ||
-        repLeaderboardCommand ||
-        streakCommand ||
-        vipsCommand ||
-        nominateCommand ||
-        giftPointsCommand;
-    logger.debug("📋 Command classification", {
-        isBotCommand,
-        commentBody,
-    });
-
-    // ============================================================
-    // IMPORTANT:
-    // COMMANDS ARE PROCESSED BEFORE POINT-AWARD LOGIC.
-    //
-    // This is the critical fix.
-    // ============================================================
-
-    if (isBotCommand) {
-        logger.info("🤖 Valid VIP Bot command detected", {
-            commandBody: commentBody,
-            user: user.username,
-            subreddit: event.subreddit.name,
-            commentId: event.comment.id,
-        });
-
-        // --------------------------------------------------------
-        // INFO
-        // --------------------------------------------------------
-
-        if (infoCommand) {
-            await executeInfoCommand(event, context, user, prefix);
-        }
-
-        // --------------------------------------------------------
-        // HELP
-        // --------------------------------------------------------
-
-        if (helpCommand) {
-            await executeHelpCommand(event, user, isMod, prefix, context);
-        }
-
-        // --------------------------------------------------------
-        // PROFILE
-        // --------------------------------------------------------
-
-        if (profileCommand) {
-            await executeProfileCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // USER RANK
-        // --------------------------------------------------------
-
-        if (userRankCommand) {
-            await executeUserRankCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // RANK
-        // --------------------------------------------------------
-
-        if (rankCommand) {
-            await executeRankCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // BALANCE
-        // --------------------------------------------------------
-
-        if (balanceCommand) {
-            await executeBalanceCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // ACHIEVEMENTS
-        // --------------------------------------------------------
-
-        if (achievementsCommand) {
-            executeAchievementCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // XP LEADERBOARD
-        // --------------------------------------------------------
-
-        if (xpLeaderboardCommand) {
-            await executeXPLeaderboardCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // COINS LEADERBOARD
-        // --------------------------------------------------------
-
-        if (coinLeaderboardCommand) {
-            await executeCoinLeaderboardCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // REP LEADERBOARD
-        // --------------------------------------------------------
-
-        if (repLeaderboardCommand) {
-            await executeRepLeaderboardCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // LEADERBOARD
-        // --------------------------------------------------------
-
-        if (leaderboardCommand) {
-            await executeLeaderboardCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // STREAK
-        // --------------------------------------------------------
-
-        if (streakCommand) {
-            await executeStreakCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // VIPS
-        // --------------------------------------------------------
-
-        if (vipsCommand) {
-            await executeVIPCommand(event, context, user);
-        }
-
-        // --------------------------------------------------------
-        // NOMINATE
-        // --------------------------------------------------------
-
-        if (nominateCommand) {
-            await executeNominateCommand(event, context, user, isMod);
-        }
-
-        // --------------------------------------------------------
-        // TWO-ARGUMENT COMMANDS
-        // --------------------------------------------------------
-        if (bodySplit.length >= 2) {
-            const target = bodySplit[1];
-
-            if (!target) {
-                logger.error(`Target object not found, returning.`, { target });
-                return;
-            }
-            // --------------------------------------------------------
-            // USER PROFILE
-            // --------------------------------------------------------
-            if (userProfileCommand) {
-                await executeUserProfileCommand(event, context, target);
-            }
-
-            // --------------------------------------------------------
-            // THREE-ARGUMENT COMMANDS
-            // --------------------------------------------------------
-
-            if (giftPointsCommand) {
-                await executeGiftPointsCommand(event, context, user, bodySplit);
-            }
-        } else {
-            logger.warn("⚠️ Comment was detected but no handler matched", {
-                commentBody,
-                bodySplit,
-            });
-        }
     }
 }

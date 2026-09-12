@@ -4,7 +4,6 @@ import {
     AppSetting,
     ExistingFlairOverwriteHandling,
     NotifyOnDisallowedFlairReplyOptions,
-    NotifyOnSelfAwardReplyOptions,
     NotifyOnUnflairedPostReplyOptions,
     TemplateDefaults,
 } from "../config/settings";
@@ -604,44 +603,6 @@ export async function flairTextNotAllowedLogic(
     }
 }
 
-export async function selfAwardAttemptLogic(
-    event: CommentSubmit | CommentUpdate,
-    context: TriggerContext,
-    awarder: string,
-    recipient: string,
-    settings: SettingsValues
-) {
-    if (!event.comment || !event.author) return;
-    const pointName = (settings[AppSetting.PointName] as string) ?? "point";
-    const selfMsgTemplate =
-        (settings[AppSetting.SelfAwardMessage] as string) ??
-        TemplateDefaults.SelfAwardTemplate;
-    const notifySelf = ((settings[
-        AppSetting.NotifyOnSelfAward
-    ] as string[]) ?? [NotifyOnSelfAwardReplyOptions.ReplyAsComment])[0];
-    if (awarder === recipient) {
-        const selfText = formatMessage(event, selfMsgTemplate, {
-            awarder,
-            name: pointName,
-        });
-        if (notifySelf === NotifyOnSelfAwardReplyOptions.ReplyAsComment) {
-            const selfAwardMessage = await context.reddit.submitComment({
-                id: event.comment.id,
-                text: selfText,
-            });
-            await selfAwardMessage.distinguish();
-        } else if (notifySelf === NotifyOnSelfAwardReplyOptions.ReplyByPM) {
-            await context.reddit.sendPrivateMessage({
-                to: awarder,
-                subject: `You tried to award yourself a ${pointName}`,
-                text: selfText,
-            });
-        }
-        logger.debug("❌ User tried to award themselves.");
-        return;
-    }
-}
-
 export function commentContainsCommandWithUserMention(
     user: User,
     prefix: string,
@@ -666,7 +627,7 @@ export function commentContainsCommand(
 
     return commandRegex.test(commentBody);
 }
-export async function setUserScoreOnPostSubmit(
+export async function setManagedFlairScoreOnPostSubmit(
     event: PostSubmit,
     context: TriggerContext,
     username: string,
@@ -831,7 +792,7 @@ export async function setUserScoreOnPostSubmit(
             return;
         }
 
-        const currentScore = await getCurrentScore(user, context);
+        const currentScore = await getManagedFlairScore(user, context);
 
         if (!currentScore) {
             logger.error(`No current score found for user, returning.`, {
@@ -839,7 +800,6 @@ export async function setUserScoreOnPostSubmit(
             });
             return;
         }
-
 
         logger.info("Setting user flair", {
             username,
@@ -864,7 +824,7 @@ export async function setUserScoreOnPostSubmit(
     }
 }
 
-export async function setUserScore(
+export async function setManagedFlairScore(
     context: TriggerContext,
     username: string,
     newScore: ScoreResult,
@@ -948,8 +908,7 @@ export async function setUserScore(
 
         const userRank = index >= 0 ? index + 1 : undefined;
         if (!userRank) {
-            logger.error(`Couldn't find user's rank`, {
-            });
+            logger.error(`Couldn't find user's rank`, {});
             return;
         }
         const flairText = formatFlair(flairFormatting, {
@@ -1026,7 +985,7 @@ export async function setUserScore(
             return;
         }
 
-        const currentScore = await getCurrentScore(user, context);
+        const currentScore = await getManagedFlairScore(user, context);
 
         if (!currentScore) {
             logger.error(`No current score found for user, returning.`, {
@@ -1058,7 +1017,7 @@ export async function setUserScore(
     }
 }
 
-export async function setUserScoreOnCommentSubmit(
+export async function setManagedFlairScoreOnCommentSubmit(
     event: CommentSubmit,
     context: TriggerContext,
     username: string,
@@ -1229,7 +1188,7 @@ export async function setUserScoreOnCommentSubmit(
             return;
         }
 
-        const currentScore = await getCurrentScore(user, context);
+        const currentScore = await getManagedFlairScore(user, context);
 
         if (!currentScore) {
             logger.error(`No current score found for user, returning.`, {
@@ -1237,7 +1196,6 @@ export async function setUserScoreOnCommentSubmit(
             });
             return;
         }
-
 
         logger.info("Setting user flair", {
             username,
@@ -1262,7 +1220,7 @@ export async function setUserScoreOnCommentSubmit(
     }
 }
 
-export async function getCurrentScore(
+export async function getManagedFlairScore(
     user: User,
     context: TriggerContext
 ): Promise<ScoreResult | undefined> {
@@ -1362,7 +1320,7 @@ export async function getCurrentScore(
 
         pattern = pattern.replace(escapeRegex("{rank}"), rankPlaceholder);
 
-        const regex = new RegExp(`^${pattern}$`);
+        const regex = new RegExp(`${pattern}`);
 
         const matches = regex.exec(userFlair.flairText);
 

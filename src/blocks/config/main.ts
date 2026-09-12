@@ -7,13 +7,14 @@ import {
 import { Devvit, FormField } from "@devvit/public-api";
 import {
     CLEANUP_JOB,
+    MOD_DIGEST_JOB,
     UPDATE_BOT_FLAIR_JOB,
     UPDATE_MODINFO_JOB,
 } from "./constants";
 import { cleanupDeletedAccounts } from "../jobs/cleanup";
 import { modInfoJob } from "../jobs/modInfo";
 import { onCommentSubmit } from "../handlers/commentSubmit";
-import { botFlairJob } from "../handlers/users";
+import { botFlairJob, modDigestJob } from "../handlers/users";
 import {
     handleManualPointSetting,
     handleRemoveVip,
@@ -94,6 +95,11 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
     name: UPDATE_BOT_FLAIR_JOB,
     onRun: botFlairJob,
+});
+
+Devvit.addSchedulerJob({
+    name: MOD_DIGEST_JOB,
+    onRun: modDigestJob,
 });
 
 // ─────────────────────────────────────────────────────────────

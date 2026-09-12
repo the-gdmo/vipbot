@@ -1,10 +1,8 @@
 import { CommentSubmit, CommentUpdate } from "@devvit/protos";
 import { Comment, TriggerContext, User } from "@devvit/public-api";
-import {
-    AppSetting,
-} from "./settings";
+import { AppSetting } from "./settings";
 import { logger } from "../utils/logger";
-import { getCurrentScore } from "../utils/common-utils";
+import { getManagedFlairScore } from "../utils/common-utils";
 
 export const isModerator = async (
     context: TriggerContext,
@@ -55,7 +53,7 @@ export async function getUserIsSuperuser(
         if (!user) {
             return false;
         }
-        const currentScore = await getCurrentScore(user, context);
+        const currentScore = await getManagedFlairScore(user, context);
         if (!currentScore) {
             return false;
         }

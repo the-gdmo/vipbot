@@ -5,6 +5,8 @@ import {
     BOT_FLAIR_CRON,
     CLEANUP_JOB,
     CLEANUP_JOB_CRON,
+    MOD_DIGEST_CRON,
+    MOD_DIGEST_JOB,
     MODINFO_CRON,
     UPDATE_BOT_FLAIR_JOB,
     UPDATE_MODINFO_JOB,
@@ -14,18 +16,18 @@ import {
 
 export async function onAppFirstInstall(
     _: AppInstall,
-    context: TriggerContext,
+    context: TriggerContext
 ) {
     await context.redis.set("InstallDate", new Date().getTime().toString());
 }
 
 export async function onAppInstallOrUpgrade(
     _: AppInstall | AppUpgrade,
-    context: TriggerContext,
+    context: TriggerContext
 ) {
     const currentJobs = await context.scheduler.listJobs();
     await Promise.all(
-        currentJobs.map((job) => context.scheduler.cancelJob(job.id)),
+        currentJobs.map((job) => context.scheduler.cancelJob(job.id))
     );
 
     await context.scheduler.runJob({
@@ -40,6 +42,12 @@ export async function onAppInstallOrUpgrade(
         name: UPDATE_BOT_FLAIR_JOB,
         cron: BOT_FLAIR_CRON,
     });
+
+    await context.scheduler.runJob({
+        name: MOD_DIGEST_JOB,
+        cron: MOD_DIGEST_CRON,
+    });
+
     // await context.scheduler.runJob({
     //     name: UPGRADE_NOTIFIER_JOB,
     //     cron: UPGRADE_NOTIFIER_CRON,
