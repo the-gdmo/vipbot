@@ -314,7 +314,7 @@ export enum TemplateDefaults {
     CommunityEconomist = "Combined Challenges|📊 Community Economist|Hold 1,000 coins, transfer 1,000 total coins out, and spend 500 coins in the VIP Store.|coins>=1000,coinsTransferredSent>=1000,storeCoinsSpent>=500",
     AllAroundVIP = "Combined Challenges|🌟 All-Around VIP|Reach 100 posts, 500 comments, 50,000 XP, a 30-day streak, 25 reputation, 25 VIP points received, 500 coins, and active VIP status.|posts>=100,comments>=500,xp>=50000,longestStreak>=30,reputation>=25,vipPointsReceived>=25,coins>=500,hasVIP",
     LevelThresholds = "1|0|Newcomer\n2|100|Supporter\n3|500|Bronze\n4|1500|Silver\n5|5000|Gold\n6|15000|Diamond\n7|50000|Elite\n8|100000|Platinum\n9|200000|Champion\n10|300000|Legend\n11|500000|Mythic\n12|1000000|A League Of Their Own",
-    FlairFormatting = `Level {level}[#{place}] | Rank "{rank}" | {total}{symbol}`,
+    FlairFormatting = `Level {level}[#{place}] | Rank {rank} | {total}{symbol}`,
     UnflairedPostMessage = "Points cannot be awarded on posts without flair. Please award only on flaired posts.",
     OPOnlyDisallowedMessage = "Only moderators, approved users, and Post Authors (OPs) can award {name}s.",
     LeaderboardHelpPageMessage = "[How to award points with VIP Bot.]({helpPage})",
@@ -1185,7 +1185,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.XPEnabled,
                 label: "Enable XP and Levels",
                 helpText:
-                    "Track XP from subreddit activity and derive levels from XP Level Thresholds.",
+                    "Track XP from subreddit activity and derive levels from XP Level Thresholds",
                 defaultValue: true,
             },
             {
@@ -1193,8 +1193,8 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.XPPerPost,
                 label: "XP Per New Post",
                 helpText:
-                    "XP awarded when a user creates a new post. Set to 0 to disable post XP.",
-                defaultValue: 10,
+                    "XP awarded when a user creates a new post. Set to 0 to disable post XP",
+                defaultValue: 0,
                 onValidate: numberFieldHasValidOption,
             },
             {
@@ -1202,8 +1202,8 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.XPPerComment,
                 label: "XP Per New Comment",
                 helpText:
-                    "XP awarded when a user creates a new comment. Edited comments do not earn XP. Set to 0 to disable comment XP.",
-                defaultValue: 2,
+                    "XP awarded when a user creates a new comment. Edited comments do not earn XP. Set to 0 to disable comment XP",
+                defaultValue: 0,
                 onValidate: numberFieldHasValidOption,
             },
             {
@@ -1217,7 +1217,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.DailyCoinReward,
                 label: "Daily Activity Coin Reward",
                 helpText:
-                    "Coins awarded once per UTC day when a user participates. Set to 0 to disable the daily coin reward.",
+                    "Coins awarded once per UTC day when a user participates. Set to 0 to disable the daily coin reward",
                 defaultValue: 1,
                 onValidate: numberFieldHasValidOption,
             },
@@ -1226,7 +1226,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.MaxCoinGiftAmount,
                 label: "Maximum /givecoins Transfer",
                 helpText:
-                    "Maximum number of coins a user may transfer with /givecoins in one command. Set to 0 for no maximum.",
+                    "Maximum number of coins a user may transfer with /givecoins in one command. Set to 0 for no maximum",
                 defaultValue: 1000,
                 onValidate: numberFieldHasValidOption,
             },
@@ -1235,7 +1235,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.PointCommand,
                 label: "Point Reply Award Command",
                 helpText:
-                    "Command name without the configured prefix. When used as the entire body of a reply to another user's comment, the parent-comment author receives both the configured VIP-point award and the configured coin award. Example: vippoint becomes /vippoint with the default prefix.",
+                    "Command name without the configured prefix. When used as the entire body of a reply to another user's comment, the parent-comment author receives both the configured VIP-point award and the configured coin award. Example: vip becomes /vip with the default prefix",
                 defaultValue: TemplateDefaults.PointCommand,
                 onValidate: rewardCommandIsValid,
             },
@@ -1244,7 +1244,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.PointCommandVIPPointAmount,
                 label: "VIP Points Per Point Command",
                 helpText:
-                    "Number of VIP points awarded to the parent-comment author each time the configured pointCommand succeeds.",
+                    "Number of VIP points awarded to the parent-comment author each time the configured pointCommand succeeds",
                 defaultValue: 1,
                 onValidate: positiveWholeNumberFieldHasValidOption,
             },
@@ -1253,7 +1253,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.PointCommandCoinAmount,
                 label: "Coins Per Point Command",
                 helpText:
-                    "Number of VIP Coins awarded to the parent-comment author each time the configured pointCommand succeeds.",
+                    "Number of VIP Coins awarded to the parent-comment author each time the configured pointCommand succeeds",
                 defaultValue: 1,
                 onValidate: positiveWholeNumberFieldHasValidOption,
             },
@@ -1274,7 +1274,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NominationReputationReward,
                 label: "Reputation Per Nomination",
                 helpText:
-                    "Reputation added to a user when they receive a nomination. Set to 0 if nominations should not change reputation.",
+                    "Reputation added to a user when they receive a nomination. Set to 0 if nominations should not change reputation",
                 defaultValue: 1,
                 onValidate: numberFieldHasValidOption,
             },
@@ -1313,14 +1313,14 @@ export const appSettings: SettingsFormField[] = [
                 type: "boolean",
                 name: AppSetting.AutoVIPEnabled,
                 label: "Automatically Grant VIP From XP",
-                defaultValue: false,
+                defaultValue: true,
             },
             {
                 type: "number",
                 name: AppSetting.AutoVIPXPThreshold,
                 label: "Automatic VIP XP Threshold",
                 helpText:
-                    "Users at or above this XP amount can automatically receive VIP when automatic VIP is enabled.",
+                    "Users at or above this XP amount can automatically receive VIP when automatic VIP is enabled",
                 defaultValue: 50000,
                 onValidate: numberFieldHasValidOption,
             },
@@ -1329,7 +1329,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.DefaultVIPDurationDays,
                 label: "Default VIP Duration (Days)",
                 helpText:
-                    "Default duration for automatic VIP grants and the moderator VIP context-menu form. Use 0 for permanent VIP.",
+                    "Default duration for automatic VIP grants and the moderator VIP context-menu form. Use 0 for permanent VIP",
                 defaultValue: 0,
                 onValidate: numberFieldHasValidOption,
             },
@@ -1338,7 +1338,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.AuditLoggingEnabled,
                 label: "Enable VIPBot Audit Logging",
                 helpText:
-                    "Store important VIPBot actions such as VIP changes, moderator stat changes, nominations, and coin transfers.",
+                    "Store important VIPBot actions such as VIP changes, moderator stat changes, nominations, and coin transfers",
                 defaultValue: true,
             },
         ],
@@ -1352,7 +1352,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.AchievementsEnabled,
                 label: "Enable Achievements",
                 helpText:
-                    "Automatically evaluate and permanently unlock configured VIPBot achievements.",
+                    "Automatically evaluate and permanently unlock configured VIPBot achievements",
                 defaultValue: true,
             },
             ...ACHIEVEMENT_CATEGORY_SPECS.map(
@@ -1381,7 +1381,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.VIPStoreEnabled,
                 label: "Enable VIP Store",
                 helpText:
-                    "Allow users to spend VIP Coins on temporary VIP status with the /store command.",
+                    "Allow users to spend VIP Coins on temporary VIP status with the /store command",
                 defaultValue: true,
             },
             {
@@ -1473,7 +1473,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify users when they try to award points on a post without flair if it's not allowed",
                 options: NotifyOnUnflairedPostReplyOptionChoices,
                 defaultValue: [
-                    NotifyOnUnflairedPostReplyOptions.ReplyAsComment,
+                    NotifyOnUnflairedPostReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1494,7 +1494,7 @@ export const appSettings: SettingsFormField[] = [
                     "How to notify the user when they try to use the normal command on a user who has already received a point for that comment",
                 options: NotifyOnPointAlreadyAwardedToUserOptionChoices,
                 defaultValue: [
-                    NotifyOnPointAlreadyAwardedToUserReplyOptions.ReplyAsComment,
+                    NotifyOnPointAlreadyAwardedToUserReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1514,7 +1514,7 @@ export const appSettings: SettingsFormField[] = [
                     "How to notify the user when they try to award a point to the Post Author (OP)",
                 options: NotifyOnPostAuthorAwardReplyOptionChoices,
                 defaultValue: [
-                    NotifyOnPostAuthorAwardReplyOptions.ReplyAsComment,
+                    NotifyOnPostAuthorAwardReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1546,7 +1546,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify users when only moderators can award points",
                 options: NotifyOnModOnlyDisallowedReplyOptionChoices,
                 defaultValue: [
-                    NotifyOnModOnlyDisallowedReplyOptions.ReplyAsComment,
+                    NotifyOnModOnlyDisallowedReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1604,7 +1604,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify Users When Only OP, Approved Users, And Moderators Can Award Points",
                 options: NotifyOnOPOnlyDisallowedReplyOptionChoices,
                 defaultValue: [
-                    NotifyOnOPOnlyDisallowedReplyOptions.ReplyAsComment,
+                    NotifyOnOPOnlyDisallowedReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1623,7 +1623,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Notify users when they try to award points on a post with a disallowed flair",
                 options: NotifyOnDisallowedFlairReplyOptionChoices,
                 defaultValue: [
-                    NotifyOnDisallowedFlairReplyOptions.ReplyAsComment,
+                    NotifyOnDisallowedFlairReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1707,7 +1707,7 @@ export const appSettings: SettingsFormField[] = [
                     "How to notify users when a moderator or trusted user awards a point",
                 options: NotifyOnModAwardSuccessOptionChoices,
                 defaultValue: [
-                    NotifyOnModAwardSuccessReplyOptions.ReplyAsComment,
+                    NotifyOnModAwardSuccessReplyOptions.NoReply,
                 ],
                 onValidate: selectFieldHasOptionChosen,
             },
@@ -1723,9 +1723,9 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnModAwardFail,
                 type: "select",
                 label: "Notify on mod award fail",
-                helpText: `Applicable to both "Mod Award Fail Message" and "Message to send user when the "Trusted User/Mod award command" has already been used on the comment."`,
+                helpText: `Applicable to both "Mod Award Fail Message" and "Message to send user when the "Trusted User/Mod award command" has already been used on the comment"`,
                 options: NotifyOnModAwardFailOptionChoices,
-                defaultValue: [NotifyOnModAwardFailReplyOptions.ReplyAsComment],
+                defaultValue: [NotifyOnModAwardFailReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1811,7 +1811,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnSelfAward,
                 label: "Notify users when they try to award themselves",
                 options: NotifyOnSelfAwardReplyOptionChoices,
-                defaultValue: [NotifyOnSelfAwardReplyOptions.ReplyAsComment],
+                defaultValue: [NotifyOnSelfAwardReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1836,7 +1836,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnBlockedUser,
                 label: "How to notify users when they are blocked from awarding points",
                 options: NotifyOnBlockedUserReplyOptionChoices,
-                defaultValue: [NotifyOnBlockedUserReplyOptions.ReplyAsComment],
+                defaultValue: [NotifyOnBlockedUserReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1885,7 +1885,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "string",
                 label: "Discord Server Link",
                 helpText:
-                    "Optional. Link to your subreddit's discord server. A non-expiring link is recommended.",
+                    "Optional. Link to your subreddit's discord server. A non-expiring link is recommended",
             },
             {
                 name: AppSetting.LeaderboardName,
@@ -1905,7 +1905,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "string",
                 label: "Point System Help Page",
                 helpText:
-                    "Optional. Name of the wiki page for explaining your subreddit's point system (e.g. pointsystem).",
+                    "Optional. Name of the wiki page for explaining your subreddit's point system (e.g. pointsystem)",
             },
         ],
     },
@@ -1918,7 +1918,7 @@ export const appSettings: SettingsFormField[] = [
                 label: "Create a new Modmail conversation for each summary",
                 name: AppSetting.DigestNewMessageEachDay,
                 helpText:
-                    "If enabled, a new modmail conversation will be created for each summary message. If disabled, the bot will reply to the previous summary message when sending a new summary.",
+                    "If enabled, a new modmail conversation will be created for each summary message. If disabled, the bot will reply to the previous summary message when sending a new summary",
                 defaultValue: true,
             },
             {
@@ -1939,7 +1939,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "boolean",
                 label: "Send summary to the 'Mod Notifications' section of modmail",
                 helpText:
-                    "If set, the daily digest will be sent to the 'Mod Notifications' section of modmail, otherwise it will go into the main inbox.",
+                    "If set, the daily digest will be sent to the 'Mod Notifications' section of modmail, otherwise it will go into the main inbox",
                 name: AppSetting.DigestAsModNotification,
                 defaultValue: false,
             },
