@@ -1213,6 +1213,8 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 ---
 
 ## Latest Changes
+### 1.0.5
+* Return mod digest job to working as intended (forgot to add commenting durations back to v1.0.4)
 ## v1.0.4
 * Add change log file
 * Change version formatting for "Latest Changes"

@@ -1,4 +1,9 @@
-import { JobContext, JSONObject, ScheduledJobEvent } from "@devvit/public-api";
+import {
+    JobContext,
+    JSONObject,
+    ScheduledJobEvent,
+    TriggerContext,
+} from "@devvit/public-api";
 import { logger } from "../utils/logger";
 import { AppSetting } from "../config/settings";
 
@@ -82,10 +87,10 @@ export async function modDigestJob(
 
         const now = Date.now();
 
-        // const intervalMs =
-        //     frequency === "Daily"
-        //         ? 24 * 60 * 60 * 1000
-        //         : 7 * 24 * 60 * 60 * 1000;
+        const intervalMs =
+            frequency === "Daily"
+                ? 24 * 60 * 60 * 1000
+                : 7 * 24 * 60 * 60 * 1000;
 
         const redisPrefix = "vipbot:modDigest";
 
@@ -115,33 +120,33 @@ export async function modDigestJob(
             });
         }
 
-        // if (lastSentAt !== undefined && now - lastSentAt < intervalMs) {
-        //     logger.info("⏭️ Mod digest is not due yet", {
-        //         subreddit: subredditName,
-        //         frequency,
-        //         lastSentAt,
-        //         lastSentAtISO: new Date(lastSentAt).toISOString(),
-        //         nextEligibleAt: lastSentAt + intervalMs,
-        //         nextEligibleAtISO: new Date(
-        //             lastSentAt + intervalMs
-        //         ).toISOString(),
-        //         elapsedMs: now - lastSentAt,
-        //         requiredIntervalMs: intervalMs,
-        //     });
+        if (lastSentAt !== undefined && now - lastSentAt < intervalMs) {
+            logger.info("⏭️ Mod digest is not due yet", {
+                subreddit: subredditName,
+                frequency,
+                lastSentAt,
+                lastSentAtISO: new Date(lastSentAt).toISOString(),
+                nextEligibleAt: lastSentAt + intervalMs,
+                nextEligibleAtISO: new Date(
+                    lastSentAt + intervalMs
+                ).toISOString(),
+                elapsedMs: now - lastSentAt,
+                requiredIntervalMs: intervalMs,
+            });
 
-        //     return;
-        // }
+            return;
+        }
 
-        // const periodStart =
-        //     lastSentAt !== undefined && lastSentAt < now
-        //         ? lastSentAt
-        //         : now - intervalMs;
+        const periodStart =
+            lastSentAt !== undefined && lastSentAt < now
+                ? lastSentAt
+                : now - intervalMs;
 
         logger.info("✅ Mod digest is due", {
             subreddit: subredditName,
             frequency,
-            // periodStart,
-            // periodStartISO: new Date(periodStart).toISOString(),
+            periodStart,
+            periodStartISO: new Date(periodStart).toISOString(),
             periodEnd: now,
             periodEndISO: new Date(now).toISOString(),
         });
@@ -213,10 +218,10 @@ export async function modDigestJob(
                     continue;
                 }
 
-                // if (timestamp < periodStart || timestamp > now) {
-                //     outsidePeriodEntries++;
-                //     continue;
-                // }
+                if (timestamp < periodStart || timestamp > now) {
+                    outsidePeriodEntries++;
+                    continue;
+                }
 
                 auditEntries.push(parsed);
             } catch (error) {
@@ -414,9 +419,9 @@ export async function modDigestJob(
             frequency,
         });
 
-        // const periodStartText = new Date(periodStart).toUTCString();
+        const periodStartText = new Date(periodStart).toUTCString();
 
-        // const periodEndText = new Date(now).toUTCString();
+        const periodEndText = new Date(now).toUTCString();
 
         const subject = `VIPBot ${frequency} Summary — ` + `r/${subredditName}`;
 
@@ -424,7 +429,7 @@ export async function modDigestJob(
 
         body += `**Subreddit:** r/${subredditName}\n\n`;
 
-        // body += `**Period:** ${periodStartText} → ${periodEndText}\n\n`;
+        body += `**Period:** ${periodStartText} → ${periodEndText}\n\n`;
 
         body += `---\n\n`;
 
@@ -647,7 +652,7 @@ export async function modDigestJob(
             conversationId: conversationId ?? null,
             auditEntryCount: auditEntries.length,
             activeVIPCount: activeVIPs.length,
-            // periodStartISO: new Date(periodStart).toISOString(),
+            periodStartISO: new Date(periodStart).toISOString(),
             periodEndISO: new Date(now).toISOString(),
         });
     } catch (error) {
@@ -656,14 +661,14 @@ export async function modDigestJob(
 
         const stack = error instanceof Error ? error.stack : undefined;
 
-        /*
-         * Passing context causes your logger.error() implementation to
-         * send the failure to the subreddit's moderators as well.
-         */
-        await logger.error("❌ Mod digest job failed", {
-            subreddit: subredditName,
-            error: errorMessage,
-            stack,
-        });
+        await logger.error(
+            "❌ Mod digest job failed",
+            {
+                subreddit: subredditName,
+                error: errorMessage,
+                stack,
+            },
+            context as TriggerContext
+        );
     }
 }
