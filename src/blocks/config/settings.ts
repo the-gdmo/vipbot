@@ -57,7 +57,6 @@ export enum AppSetting {
     PointSystemHelpPage = "pointSystemHelpPage",
     DigestNewMessageEachDay = "digestNewMessageEachDay",
     DigestFrequency = "digestFrequency",
-    DigestAsModNotification = "digestAsModNotification",
     UpgradeNotifier = "upgradeNotifier",
     CSSClass = "CSSClass",
     FlairTemplate = "flairTemplate",
@@ -1473,9 +1472,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnUnflairedPost,
                 label: "Notify users when they try to award points on a post without flair if it's not allowed",
                 options: NotifyOnUnflairedPostReplyOptionChoices,
-                defaultValue: [
-                    NotifyOnUnflairedPostReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnUnflairedPostReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1514,9 +1511,7 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify the user when they try to award a point to the Post Author (OP)",
                 options: NotifyOnPostAuthorAwardReplyOptionChoices,
-                defaultValue: [
-                    NotifyOnPostAuthorAwardReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnPostAuthorAwardReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1546,9 +1541,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnModOnlyDisallowed,
                 label: "Notify users when only moderators can award points",
                 options: NotifyOnModOnlyDisallowedReplyOptionChoices,
-                defaultValue: [
-                    NotifyOnModOnlyDisallowedReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnModOnlyDisallowedReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1604,9 +1597,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnOPOnlyDisallowed,
                 label: "Notify Users When Only OP, Approved Users, And Moderators Can Award Points",
                 options: NotifyOnOPOnlyDisallowedReplyOptionChoices,
-                defaultValue: [
-                    NotifyOnOPOnlyDisallowedReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnOPOnlyDisallowedReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1623,9 +1614,7 @@ export const appSettings: SettingsFormField[] = [
                 name: AppSetting.NotifyOnDisallowedFlair,
                 label: "Notify users when they try to award points on a post with a disallowed flair",
                 options: NotifyOnDisallowedFlairReplyOptionChoices,
-                defaultValue: [
-                    NotifyOnDisallowedFlairReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnDisallowedFlairReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1707,9 +1696,7 @@ export const appSettings: SettingsFormField[] = [
                 helpText:
                     "How to notify users when a moderator or trusted user awards a point",
                 options: NotifyOnModAwardSuccessOptionChoices,
-                defaultValue: [
-                    NotifyOnModAwardSuccessReplyOptions.NoReply,
-                ],
+                defaultValue: [NotifyOnModAwardSuccessReplyOptions.NoReply],
                 onValidate: selectFieldHasOptionChosen,
             },
             {
@@ -1858,8 +1845,7 @@ export const appSettings: SettingsFormField[] = [
                 type: "paragraph",
                 name: AppSetting.AccountsThatWillNotBeManaged,
                 label: "Ignored Accounts",
-                helpText:
-                    "Accounts that will not be managed by VIP Bot. No u/",
+                helpText: "Accounts that will not be managed by VIP Bot. No u/",
                 defaultValue: TemplateDefaults.AccountsThatWillNotBeManaged,
             },
             {
@@ -1916,18 +1902,17 @@ export const appSettings: SettingsFormField[] = [
         fields: [
             {
                 type: "boolean",
-                label: "Create a new Modmail conversation for each summary",
+                label: "Create a new Modmail conversation for each summary?",
                 name: AppSetting.DigestNewMessageEachDay,
                 helpText:
-                    "If enabled, a new modmail conversation will be created for each summary message. If disabled, the bot will reply to the previous summary message when sending a new summary",
-                defaultValue: true,
+                    `All summaries will be sent to the "Mod Discussions" section of modmail`,
+                defaultValue: false,
             },
             {
                 type: "select",
                 label: "Frequency of summary messages",
                 name: AppSetting.DigestFrequency,
-                helpText:
-                    "Choose how often you would like to receive the summary messages",
+                helpText: `Choose how often you would like to receive the summary messages. All summaries will be sent to "Mod Discussions"`,
                 options: [
                     { label: "Daily", value: "Daily" },
                     { label: "Weekly", value: "Weekly" },
@@ -1935,14 +1920,6 @@ export const appSettings: SettingsFormField[] = [
                 multiSelect: false,
                 defaultValue: ["Weekly"],
                 onValidate: selectFieldHasOptionChosen,
-            },
-            {
-                type: "boolean",
-                label: "Send summary to the 'Mod Notifications' section of modmail",
-                helpText:
-                    "If set, the daily digest will be sent to the 'Mod Notifications' section of modmail, otherwise it will go into the main inbox",
-                name: AppSetting.DigestAsModNotification,
-                defaultValue: false,
             },
         ],
     },

@@ -1,6 +1,8 @@
 # Changelog for VIP Bot
 ## v1.0.4
 * Add change log file
+* Change version formatting for latest changes
+* Make Mod Digest options for where it is sent to work properly
 ## v1.0.3
 * Add "Moderators Exempt From Flairing?" option (by default, mods are exempt from flair management)
 ## v1.0.2

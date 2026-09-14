@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "vipbot2",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "license": "BSD-3-Clause",
   "type": "module",
   "scripts": {

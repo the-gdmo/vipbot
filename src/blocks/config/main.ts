@@ -14,7 +14,7 @@ import {
 import { cleanupDeletedAccounts } from "../jobs/cleanup";
 import { modInfoJob } from "../jobs/modInfo";
 import { onCommentSubmit } from "../handlers/commentSubmit";
-import { botFlairJob, modDigestJob } from "../handlers/users";
+import { botFlairJob } from "../handlers/users";
 import {
     handleManualPointSetting,
     handleRemoveVip,
@@ -29,6 +29,7 @@ import {
     setXpFormHandler,
     vipAddDaysFormHandler,
 } from "./userProfile";
+import { modDigestJob } from "../jobs/modDigest";
 
 /**
  *

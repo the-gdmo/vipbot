@@ -1215,7 +1215,8 @@ This app is open source and licensed under the BSD 3-Clause License. You can fin
 ## Latest Changes
 ## v1.0.4
 * Add change log file
-* Change version formatting
+* Change version formatting for "Latest Changes"
+* Make all mod digests be sent to the "Mod Discussions" Section of modmail
 ## v1.0.3
 * Add "Moderators Exempt From Flairing?" option (by default, mods are exempt from flair management)
 ## v1.0.2
